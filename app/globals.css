@@ -22,12 +22,18 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 6rem;
 }
 
 body {
   background: var(--cream);
   color: var(--forest-deep);
   font-family: var(--font-source), system-ui, sans-serif;
+}
+
+a,
+button {
+  cursor: pointer;
 }
 
 ::selection {

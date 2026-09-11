@@ -81,12 +81,14 @@ const yearlyFeatures = [
 ];
 
 type PropertyType = "primary" | "vacation" | "airbnb" | "";
+type PlanType = "monthly" | "yearly" | "";
 
 type FormState = {
   name: string;
   email: string;
   phone: string;
   propertyType: PropertyType;
+  plan: PlanType;
   message: string;
 };
 
@@ -95,8 +97,12 @@ const emptyForm: FormState = {
   email: "",
   phone: "",
   propertyType: "",
+  plan: "",
   message: "",
 };
+
+const goldButtonClass =
+  "inline-flex items-center justify-center gap-2 rounded-full bg-gold px-5 py-2.5 font-bold text-forest-deep shadow-sm transition hover:-translate-y-0.5 hover:bg-[#c99200] hover:shadow-md";
 
 function Logo({ className = "" }: { className?: string }) {
   return (
@@ -131,6 +137,13 @@ export default function HomePage() {
   );
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
 
+  const planLabel =
+    form.plan === "monthly"
+      ? "Monthly Watch"
+      : form.plan === "yearly"
+        ? "Yearly Watch"
+        : "Not specified";
+
   const mailtoHref = useMemo(() => {
     const propertyLabel =
       form.propertyType === "primary"
@@ -141,17 +154,32 @@ export default function HomePage() {
             ? "Airbnb"
             : "Not specified";
 
+    const selectedPlan =
+      form.plan === "monthly"
+        ? "Monthly Watch"
+        : form.plan === "yearly"
+          ? "Yearly Watch"
+          : "Not specified";
+
+    const subject =
+      form.plan === "monthly"
+        ? "Monthly Home Watch Request"
+        : form.plan === "yearly"
+          ? "Yearly Home Watch Request"
+          : "Home Watch Service Request";
+
     const body = [
       `Name: ${form.name}`,
       `Email: ${form.email}`,
       `Phone: ${form.phone}`,
       `Property type: ${propertyLabel}`,
+      `Service plan: ${selectedPlan}`,
       "",
       form.message,
     ].join("\n");
 
     return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
-      "Home Watch Service Request",
+      subject,
     )}&body=${encodeURIComponent(body)}`;
   }, [form]);
 
@@ -192,6 +220,16 @@ export default function HomePage() {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   }
 
+  function requestService(plan: PlanType = "") {
+    setMenuOpen(false);
+    if (plan) {
+      setForm((current) => ({ ...current, plan }));
+    }
+    window.setTimeout(() => {
+      document.getElementById("contact-name")?.focus({ preventScroll: true });
+    }, 400);
+  }
+
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-50 border-b border-white/10 bg-forest-deep/95 text-white backdrop-blur-md">
@@ -205,35 +243,35 @@ export default function HomePage() {
           </a>
 
           <nav className="hidden items-center gap-8 text-sm font-semibold tracking-wide md:flex">
-            <button
-              type="button"
+            <a
+              href="#services"
               className="transition hover:text-gold"
-              onClick={() => scrollToId("services")}
+              onClick={() => setMenuOpen(false)}
             >
               Services
-            </button>
-            <button
-              type="button"
+            </a>
+            <a
+              href="#plans"
               className="transition hover:text-gold"
-              onClick={() => scrollToId("plans")}
+              onClick={() => setMenuOpen(false)}
             >
               Plans
-            </button>
-            <button
-              type="button"
+            </a>
+            <a
+              href="#contact"
               className="transition hover:text-gold"
-              onClick={() => scrollToId("contact")}
+              onClick={() => requestService()}
             >
               Contact
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToId("contact")}
-              className="inline-flex items-center gap-2 rounded-full bg-gold px-5 py-2.5 font-bold text-forest-deep shadow-sm transition hover:bg-[#f3c01a]"
+            </a>
+            <a
+              href="#contact"
+              onClick={() => requestService()}
+              className={goldButtonClass}
             >
               Request Service
               <ArrowRight className="h-4 w-4" />
-            </button>
+            </a>
           </nav>
 
           <button
@@ -249,34 +287,34 @@ export default function HomePage() {
         {menuOpen ? (
           <div className="border-t border-white/10 px-4 py-4 md:hidden">
             <div className="flex flex-col gap-3 text-sm font-semibold">
-              <button
-                type="button"
-                className="rounded-md px-2 py-2 text-left hover:bg-white/10"
-                onClick={() => scrollToId("services")}
+              <a
+                href="#services"
+                className="rounded-md px-2 py-2 hover:bg-white/10"
+                onClick={() => setMenuOpen(false)}
               >
                 Services
-              </button>
-              <button
-                type="button"
-                className="rounded-md px-2 py-2 text-left hover:bg-white/10"
-                onClick={() => scrollToId("plans")}
+              </a>
+              <a
+                href="#plans"
+                className="rounded-md px-2 py-2 hover:bg-white/10"
+                onClick={() => setMenuOpen(false)}
               >
                 Plans
-              </button>
-              <button
-                type="button"
-                className="rounded-md px-2 py-2 text-left hover:bg-white/10"
-                onClick={() => scrollToId("contact")}
+              </a>
+              <a
+                href="#contact"
+                className="rounded-md px-2 py-2 hover:bg-white/10"
+                onClick={() => requestService()}
               >
                 Contact
-              </button>
-              <button
-                type="button"
-                onClick={() => scrollToId("contact")}
-                className="mt-1 inline-flex items-center justify-center gap-2 rounded-full bg-gold px-5 py-3 font-bold text-forest-deep"
+              </a>
+              <a
+                href="#contact"
+                onClick={() => requestService()}
+                className={`mt-1 ${goldButtonClass} py-3`}
               >
                 Request Service
-              </button>
+              </a>
             </div>
           </div>
         ) : null}
@@ -302,17 +340,18 @@ export default function HomePage() {
                 cottages, and year-round homes across Northern Michigan.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => scrollToId("contact")}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-gold px-7 py-3.5 text-sm font-bold tracking-wide text-forest-deep uppercase transition hover:bg-[#f3c01a]"
+                <a
+                  href="#contact"
+                  onClick={() => requestService()}
+                  className={`${goldButtonClass} px-7 py-3.5 text-sm tracking-wide uppercase`}
                 >
                   Request Service
                   <ArrowRight className="h-4 w-4" />
-                </button>
+                </a>
                 <a
-                  href={`mailto:${CONTACT_EMAIL}`}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/80 px-7 py-3.5 text-sm font-bold tracking-wide text-white uppercase transition hover:bg-white hover:text-forest-deep"
+                  href="#contact"
+                  onClick={() => requestService()}
+                  className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/80 px-7 py-3.5 text-sm font-bold tracking-wide text-white uppercase transition hover:-translate-y-0.5 hover:bg-white hover:text-forest-deep"
                 >
                   Get in Touch
                 </a>
@@ -365,7 +404,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="services" className="bg-cream px-4 py-20 sm:px-6">
+        <section id="services" className="scroll-mt-24 bg-cream px-4 py-20 sm:px-6">
           <div className="mx-auto max-w-6xl">
             <p className="text-sm font-bold tracking-[0.22em] text-lake uppercase">
               Core Services
@@ -416,7 +455,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="plans" className="bg-mist px-4 py-20 sm:px-6">
+        <section id="plans" className="scroll-mt-24 bg-mist px-4 py-20 sm:px-6">
           <div className="mx-auto max-w-6xl">
             <p className="text-sm font-bold tracking-[0.22em] text-lake uppercase">
               Service Plans
@@ -453,13 +492,14 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <button
-                  type="button"
-                  onClick={() => scrollToId("contact")}
-                  className="mt-8 inline-flex items-center justify-center gap-2 rounded-full border-2 border-forest px-6 py-3 text-sm font-bold text-forest uppercase transition hover:bg-forest hover:text-white"
+                <a
+                  href="#contact"
+                  onClick={() => requestService("monthly")}
+                  className="mt-8 inline-flex items-center justify-center gap-2 rounded-full border-2 border-forest px-6 py-3 text-sm font-bold text-forest uppercase transition hover:-translate-y-0.5 hover:bg-forest hover:text-white hover:shadow-md"
                 >
                   Request monthly service
-                </button>
+                  <ArrowRight className="h-4 w-4" />
+                </a>
               </article>
 
               <article className="relative flex flex-col rounded-3xl border-2 border-gold bg-forest p-8 text-white shadow-xl">
@@ -487,19 +527,20 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <button
-                  type="button"
-                  onClick={() => scrollToId("contact")}
-                  className="mt-8 inline-flex items-center justify-center gap-2 rounded-full bg-gold px-6 py-3 text-sm font-bold text-forest-deep uppercase transition hover:bg-[#f3c01a]"
+                <a
+                  href="#contact"
+                  onClick={() => requestService("yearly")}
+                  className={`mt-8 ${goldButtonClass} px-6 py-3 text-sm uppercase`}
                 >
                   Request yearly service
-                </button>
+                  <ArrowRight className="h-4 w-4" />
+                </a>
               </article>
             </div>
           </div>
         </section>
 
-        <section id="contact" className="bg-cream px-4 py-20 sm:px-6">
+        <section id="contact" className="scroll-mt-24 bg-cream px-4 py-20 sm:px-6">
           <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[1fr_1.15fr]">
             <div>
               <p className="text-sm font-bold tracking-[0.22em] text-lake uppercase">
@@ -549,10 +590,18 @@ export default function HomePage() {
               className="rounded-3xl border border-forest/10 bg-white p-6 shadow-lg sm:p-8"
               noValidate
             >
+              {form.plan ? (
+                <p className="mb-5 rounded-xl border border-gold/40 bg-gold/15 px-4 py-3 text-sm font-semibold text-forest">
+                  You&apos;re requesting {planLabel}. Complete the form and
+                  we&apos;ll follow up with scheduling.
+                </p>
+              ) : null}
+
               <div className="grid gap-5 sm:grid-cols-2">
                 <label className="flex flex-col gap-2 sm:col-span-2">
                   <span className="text-sm font-semibold text-forest">Name</span>
                   <input
+                    id="contact-name"
                     name="name"
                     autoComplete="name"
                     value={form.name}
@@ -643,6 +692,27 @@ export default function HomePage() {
 
                 <label className="flex flex-col gap-2 sm:col-span-2">
                   <span className="text-sm font-semibold text-forest">
+                    Service Plan
+                  </span>
+                  <select
+                    name="plan"
+                    value={form.plan}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        plan: event.target.value as PlanType,
+                      }))
+                    }
+                    className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
+                  >
+                    <option value="">Not sure yet</option>
+                    <option value="monthly">Monthly Watch</option>
+                    <option value="yearly">Yearly Watch</option>
+                  </select>
+                </label>
+
+                <label className="flex flex-col gap-2 sm:col-span-2">
+                  <span className="text-sm font-semibold text-forest">
                     Message
                   </span>
                   <textarea
@@ -680,7 +750,7 @@ export default function HomePage() {
 
               <button
                 type="submit"
-                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gold px-6 py-3.5 text-sm font-bold tracking-wide text-forest-deep uppercase transition hover:bg-[#f3c01a]"
+                className={`mt-6 w-full ${goldButtonClass} px-6 py-3.5 text-sm tracking-wide uppercase`}
               >
                 Send service request
                 <ArrowRight className="h-4 w-4" />
