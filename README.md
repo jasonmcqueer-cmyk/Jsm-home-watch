@@ -10,7 +10,7 @@ Tagline: *Peace of mind while you're away.*
 - Trust bar (insured, references, year-round care)
 - Six-service grid for home checks, seasonal care, storm visits, vendor access, photo updates, and complete watch
 - Monthly and yearly plan comparison
-- Lead-capture form (name, email, phone, property type, message) that opens a prefilled email to `jsmhomewatch@yahoo.com`
+- Lead-capture popup (name, email, phone, property type, plan, message) that opens from Request Service and plan CTAs, then emails `jsmhomewatch@yahoo.com`
 
 The entire page lives in `app/page.tsx` so the site stays a single responsive layout.
 

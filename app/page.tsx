@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -11,7 +11,6 @@ import {
   CloudLightning,
   Home,
   Mail,
-  MapPin,
   Menu,
   Phone,
   ShieldCheck,
@@ -136,6 +135,7 @@ export default function HomePage() {
     {},
   );
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [modalOpen, setModalOpen] = useState(false);
 
   const planLabel =
     form.plan === "monthly"
@@ -220,15 +220,39 @@ export default function HomePage() {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   }
 
+  function closeModal() {
+    setModalOpen(false);
+  }
+
   function requestService(plan: PlanType = "") {
     setMenuOpen(false);
-    if (plan) {
-      setForm((current) => ({ ...current, plan }));
-    }
-    window.setTimeout(() => {
-      document.getElementById("contact-name")?.focus({ preventScroll: true });
-    }, 400);
+    setErrors({});
+    setStatus("idle");
+    setForm((current) => ({ ...current, plan }));
+    setModalOpen(true);
   }
+
+  useEffect(() => {
+    if (!modalOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeModal();
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKeyDown);
+
+    const focusTimer = window.setTimeout(() => {
+      document.getElementById("contact-name")?.focus();
+    }, 40);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+      window.clearTimeout(focusTimer);
+    };
+  }, [modalOpen]);
 
   return (
     <div className="flex min-h-full flex-col">
@@ -257,21 +281,17 @@ export default function HomePage() {
             >
               Plans
             </a>
-            <a
-              href="#contact"
-              className="transition hover:text-gold"
-              onClick={() => requestService()}
-            >
+            <a href="#contact" className="transition hover:text-gold">
               Contact
             </a>
-            <a
-              href="#contact"
+            <button
+              type="button"
               onClick={() => requestService()}
               className={goldButtonClass}
             >
               Request Service
               <ArrowRight className="h-4 w-4" />
-            </a>
+            </button>
           </nav>
 
           <button
@@ -304,17 +324,17 @@ export default function HomePage() {
               <a
                 href="#contact"
                 className="rounded-md px-2 py-2 hover:bg-white/10"
-                onClick={() => requestService()}
+                onClick={() => setMenuOpen(false)}
               >
                 Contact
               </a>
-              <a
-                href="#contact"
+              <button
+                type="button"
                 onClick={() => requestService()}
                 className={`mt-1 ${goldButtonClass} py-3`}
               >
                 Request Service
-              </a>
+              </button>
             </div>
           </div>
         ) : null}
@@ -340,21 +360,21 @@ export default function HomePage() {
                 cottages, and year-round homes across Northern Michigan.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <a
-                  href="#contact"
+                <button
+                  type="button"
                   onClick={() => requestService()}
                   className={`${goldButtonClass} px-7 py-3.5 text-sm tracking-wide uppercase`}
                 >
                   Request Service
                   <ArrowRight className="h-4 w-4" />
-                </a>
-                <a
-                  href="#contact"
+                </button>
+                <button
+                  type="button"
                   onClick={() => requestService()}
                   className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/80 px-7 py-3.5 text-sm font-bold tracking-wide text-white uppercase transition hover:-translate-y-0.5 hover:bg-white hover:text-forest-deep"
                 >
                   Get in Touch
-                </a>
+                </button>
               </div>
             </div>
           </div>
@@ -492,14 +512,14 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <a
-                  href="#contact"
+                <button
+                  type="button"
                   onClick={() => requestService("monthly")}
                   className="mt-8 inline-flex items-center justify-center gap-2 rounded-full border-2 border-forest px-6 py-3 text-sm font-bold text-forest uppercase transition hover:-translate-y-0.5 hover:bg-forest hover:text-white hover:shadow-md"
                 >
                   Request monthly service
                   <ArrowRight className="h-4 w-4" />
-                </a>
+                </button>
               </article>
 
               <article className="relative flex flex-col rounded-3xl border-2 border-gold bg-forest p-8 text-white shadow-xl">
@@ -527,67 +547,137 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <a
-                  href="#contact"
+                <button
+                  type="button"
                   onClick={() => requestService("yearly")}
                   className={`mt-8 ${goldButtonClass} px-6 py-3 text-sm uppercase`}
                 >
                   Request yearly service
                   <ArrowRight className="h-4 w-4" />
-                </a>
+                </button>
               </article>
             </div>
           </div>
         </section>
 
-        <section id="contact" className="scroll-mt-24 bg-cream px-4 py-20 sm:px-6">
-          <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[1fr_1.15fr]">
+        <section id="contact" className="scroll-mt-24 bg-cream px-4 py-16 sm:px-6">
+          <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-8 rounded-3xl bg-forest px-6 py-10 text-white sm:px-10 lg:flex-row lg:items-center">
             <div>
-              <p className="text-sm font-bold tracking-[0.22em] text-lake uppercase">
-                Request Service
+              <p className="text-sm font-bold tracking-[0.22em] text-gold uppercase">
+                Ready when you are
               </p>
-              <h2 className="mt-3 font-display text-3xl font-bold text-forest sm:text-4xl">
-                Tell us about the property. We&apos;ll take it from there.
+              <h2 className="mt-3 font-display text-3xl font-bold sm:text-4xl">
+                Have someone on the property while you&apos;re away.
               </h2>
-              <p className="mt-4 text-base text-forest/75">
-                Share a few details and we&apos;ll follow up to set a visit
-                schedule. Prefer email? Reach us directly — we answer from the
-                same inbox year-round.
+              <p className="mt-3 max-w-xl text-white/80">
+                Request service and we&apos;ll follow up to set a visit schedule.
+                Or email{" "}
+                <a
+                  href={`mailto:${CONTACT_EMAIL}`}
+                  className="font-semibold text-gold underline-offset-2 hover:underline"
+                >
+                  {CONTACT_EMAIL}
+                </a>
+                .
               </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => requestService()}
+              className={`${goldButtonClass} shrink-0 px-7 py-3.5 text-sm uppercase`}
+            >
+              Request Service
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </section>
+      </main>
 
-              <a
-                href={`mailto:${CONTACT_EMAIL}`}
-                className="mt-8 flex items-center gap-3 rounded-2xl border border-forest/10 bg-white p-5 shadow-sm transition hover:border-gold"
-              >
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-lake/10 text-lake">
-                  <Mail className="h-6 w-6" />
-                </span>
-                <div>
-                  <p className="text-xs font-bold tracking-[0.16em] text-forest/55 uppercase">
-                    Email
-                  </p>
-                  <p className="font-semibold text-lake">{CONTACT_EMAIL}</p>
-                </div>
-              </a>
+      <footer className="bg-forest-deep text-white">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-3">
+          <div>
+            <div className="inline-block rounded-xl bg-cream px-3 py-2">
+              <Logo className="h-16 w-auto" />
+            </div>
+            <p className="mt-4 text-sm text-white/75">
+              JSM Home Watch &amp; Property Care Services — peace of mind while
+              you&apos;re away.
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-bold tracking-[0.2em] text-gold uppercase">
+              Contact
+            </p>
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
+              className="mt-3 flex items-center gap-2 text-sm hover:text-gold"
+            >
+              <Mail className="h-4 w-4" />
+              {CONTACT_EMAIL}
+            </a>
+            <p className="mt-2 flex items-center gap-2 text-sm text-white/75">
+              <Phone className="h-4 w-4" />
+              Reach us by email to schedule a call
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-bold tracking-[0.2em] text-gold uppercase">
+              Service area
+            </p>
+            <p className="mt-3 text-sm text-white/75">
+              Serving Northern Michigan — primary homes, vacation homes, and
+              Airbnbs.
+            </p>
+            <p className="mt-4 text-xs font-bold tracking-[0.16em] text-white/80 uppercase">
+              Insured · References available
+            </p>
+          </div>
+        </div>
+        <div className="border-t border-white/10 px-4 py-5 text-center text-xs text-white/55">
+          © {new Date().getFullYear()} JSM Home Watch &amp; Property Care
+          Services. All rights reserved.
+        </div>
+      </footer>
 
-              <div className="mt-4 flex items-center gap-3 rounded-2xl border border-forest/10 bg-white p-5 shadow-sm">
-                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-lake/10 text-lake">
-                  <MapPin className="h-6 w-6" />
-                </span>
-                <div>
-                  <p className="text-xs font-bold tracking-[0.16em] text-forest/55 uppercase">
-                    Service area
-                  </p>
-                  <p className="font-semibold text-forest">
-                    Lakefront and inland homes across Northern Michigan
-                  </p>
-                </div>
+      {modalOpen ? (
+        <div className="fixed inset-0 z-[80] flex items-end justify-center p-0 sm:items-center sm:p-6">
+          <button
+            type="button"
+            aria-label="Close request form"
+            className="absolute inset-0 bg-forest-deep/70 backdrop-blur-sm"
+            onClick={closeModal}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="request-title"
+            className="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-forest/10 px-5 py-4 sm:px-6">
+              <div>
+                <p className="text-xs font-bold tracking-[0.18em] text-lake uppercase">
+                  Request Service
+                </p>
+                <h2
+                  id="request-title"
+                  className="mt-1 font-display text-2xl font-bold text-forest"
+                >
+                  Tell us about the property
+                </h2>
               </div>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-full p-2 text-forest/60 transition hover:bg-cream hover:text-forest"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
             <form
               onSubmit={onSubmit}
-              className="rounded-3xl border border-forest/10 bg-white p-6 shadow-lg sm:p-8"
+              className="overflow-y-auto px-5 py-5 sm:px-6"
               noValidate
             >
               {form.plan ? (
@@ -597,7 +687,7 @@ export default function HomePage() {
                 </p>
               ) : null}
 
-              <div className="grid gap-5 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <label className="flex flex-col gap-2 sm:col-span-2">
                   <span className="text-sm font-semibold text-forest">Name</span>
                   <input
@@ -717,7 +807,7 @@ export default function HomePage() {
                   </span>
                   <textarea
                     name="message"
-                    rows={5}
+                    rows={4}
                     value={form.message}
                     onChange={(event) =>
                       setForm((current) => ({
@@ -726,7 +816,7 @@ export default function HomePage() {
                       }))
                     }
                     className="resize-y rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
-                    placeholder="Tell us about the property, travel schedule, and whether you prefer monthly or yearly service."
+                    placeholder="Tell us about the property, travel schedule, and anything we should know."
                   />
                   {errors.message ? (
                     <span className="text-sm text-red-700">{errors.message}</span>
@@ -735,7 +825,7 @@ export default function HomePage() {
               </div>
 
               {status === "success" ? (
-                <p className="mt-5 rounded-xl bg-forest/8 px-4 py-3 text-sm text-forest">
+                <p className="mt-5 rounded-xl bg-forest/10 px-4 py-3 text-sm text-forest">
                   Thank you. Your email app should open with a message to{" "}
                   <strong>{CONTACT_EMAIL}</strong>. If it doesn&apos;t, send us a
                   note at that address and we&apos;ll be in touch.
@@ -757,54 +847,8 @@ export default function HomePage() {
               </button>
             </form>
           </div>
-        </section>
-      </main>
-
-      <footer className="bg-forest-deep text-white">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-3">
-          <div>
-            <div className="inline-block rounded-xl bg-cream px-3 py-2">
-              <Logo className="h-16 w-auto" />
-            </div>
-            <p className="mt-4 text-sm text-white/75">
-              JSM Home Watch &amp; Property Care Services — peace of mind while
-              you&apos;re away.
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-bold tracking-[0.2em] text-gold uppercase">
-              Contact
-            </p>
-            <a
-              href={`mailto:${CONTACT_EMAIL}`}
-              className="mt-3 flex items-center gap-2 text-sm hover:text-gold"
-            >
-              <Mail className="h-4 w-4" />
-              {CONTACT_EMAIL}
-            </a>
-            <p className="mt-2 flex items-center gap-2 text-sm text-white/75">
-              <Phone className="h-4 w-4" />
-              Reach us by email to schedule a call
-            </p>
-          </div>
-          <div>
-            <p className="text-xs font-bold tracking-[0.2em] text-gold uppercase">
-              Service area
-            </p>
-            <p className="mt-3 text-sm text-white/75">
-              Serving Northern Michigan — primary homes, vacation homes, and
-              Airbnbs.
-            </p>
-            <p className="mt-4 text-xs font-bold tracking-[0.16em] text-white/80 uppercase">
-              Insured · References available
-            </p>
-          </div>
         </div>
-        <div className="border-t border-white/10 px-4 py-5 text-center text-xs text-white/55">
-          © {new Date().getFullYear()} JSM Home Watch &amp; Property Care
-          Services. All rights reserved.
-        </div>
-      </footer>
+      ) : null}
     </div>
   );
 }
