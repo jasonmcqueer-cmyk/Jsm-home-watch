@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+:root {
+  --forest: #0f3822;
+  --forest-deep: #092416;
+  --lake: #00529b;
+  --gold: #eaaa00;
+  --cream: #f6f3ea;
+  --mist: #eef2f0;
+}
+
+@theme inline {
+  --color-forest: var(--forest);
+  --color-forest-deep: var(--forest-deep);
+  --color-lake: var(--lake);
+  --color-gold: var(--gold);
+  --color-cream: var(--cream);
+  --color-mist: var(--mist);
+  --font-sans: var(--font-source);
+  --font-display: var(--font-playfair);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--cream);
+  color: var(--forest-deep);
+  font-family: var(--font-source), system-ui, sans-serif;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--gold) 70%, white);
+  color: var(--forest-deep);
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+}
