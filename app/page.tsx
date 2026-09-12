@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 const CONTACT_EMAIL = "jsmhomewatch@yahoo.com";
+const WEB3FORMS_ACCESS_KEY = "22572d68-6c3f-4a33-bdfb-0d4ba6171539";
 
 const trustBadges = [
   {
@@ -298,16 +299,16 @@ export default function HomePage() {
           : "Home Watch Service Request";
 
     const payload = {
+      access_key: WEB3FORMS_ACCESS_KEY,
+      subject,
+      from_name: snapshot.name.trim(),
       name: snapshot.name.trim(),
       email: snapshot.email.trim(),
       phone: snapshot.phone.trim(),
       propertyType: propertyLabel,
       plan: selectedPlan,
       message: snapshot.message.trim(),
-      _replyto: snapshot.email.trim(),
-      _subject: subject,
-      _template: "table",
-      _captcha: "false",
+      botcheck: honeypot,
     };
 
     try {
@@ -327,31 +328,26 @@ export default function HomePage() {
         return;
       }
 
-      const submitResponse = await fetch(
-        `https://formsubmit.co/ajax/${CONTACT_EMAIL}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify(payload),
+      const submitResponse = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
         },
-      );
+        body: JSON.stringify(payload),
+      });
 
-      let submitPayload: { success?: string | boolean } = {};
+      let submitPayload: { success?: boolean; message?: string } = {};
       try {
         submitPayload = (await submitResponse.json()) as {
-          success?: string | boolean;
+          success?: boolean;
+          message?: string;
         };
       } catch {
         submitPayload = {};
       }
 
-      if (
-        submitResponse.ok &&
-        (submitPayload.success === true || submitPayload.success === "true")
-      ) {
+      if (submitResponse.ok && submitPayload.success === true) {
         setSentTo(snapshot.email);
         setForm(emptyForm);
         setHoneypot("");
@@ -362,7 +358,8 @@ export default function HomePage() {
 
       setStatus("error");
       setSendError(
-        `We couldn't send that just now. Email ${CONTACT_EMAIL} directly and we'll follow up.`,
+        submitPayload.message ||
+          `We couldn't send that just now. Email ${CONTACT_EMAIL} directly and we'll follow up.`,
       );
     } catch {
       setStatus("error");
