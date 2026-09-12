@@ -166,6 +166,25 @@ const emptyForm: FormState = {
   message: "",
 };
 
+const FORM_DRAFT_KEY = "jsm-request-draft";
+
+function readDraft(): FormState {
+  if (typeof window === "undefined") return emptyForm;
+  try {
+    const raw = sessionStorage.getItem(FORM_DRAFT_KEY);
+    if (!raw) return emptyForm;
+    const parsed = JSON.parse(raw) as Partial<FormState>;
+    return { ...emptyForm, ...parsed };
+  } catch {
+    return emptyForm;
+  }
+}
+
+function writeDraft(next: FormState) {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(FORM_DRAFT_KEY, JSON.stringify(next));
+}
+
 const goldButtonClass =
   "inline-flex items-center justify-center gap-2 rounded-full bg-gold px-5 py-2.5 font-bold text-forest-deep shadow-sm transition hover:-translate-y-0.5 hover:bg-[#c99200] hover:shadow-md";
 
@@ -215,6 +234,14 @@ export default function HomePage() {
         ? "Yearly Watch"
         : "Not specified";
 
+  function patchForm(patch: Partial<FormState>) {
+    setForm((current) => {
+      const next = { ...current, ...patch };
+      writeDraft(next);
+      return next;
+    });
+  }
+
   function validate(next: FormState) {
     const nextErrors: Partial<Record<keyof FormState, string>> = {};
     if (!next.name.trim()) nextErrors.name = "Please enter your name.";
@@ -235,6 +262,8 @@ export default function HomePage() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    event.stopPropagation();
+
     const nextErrors = validate(form);
     setErrors(nextErrors);
     setSendError("");
@@ -246,35 +275,36 @@ export default function HomePage() {
 
     setStatus("submitting");
 
+    const snapshot = { ...form };
     const propertyLabel =
-      form.propertyType === "primary"
+      snapshot.propertyType === "primary"
         ? "Primary Home"
-        : form.propertyType === "vacation"
+        : snapshot.propertyType === "vacation"
           ? "Vacation Home"
-          : form.propertyType === "airbnb"
+          : snapshot.propertyType === "airbnb"
             ? "Airbnb"
-            : form.propertyType;
+            : snapshot.propertyType;
     const selectedPlan =
-      form.plan === "monthly"
+      snapshot.plan === "monthly"
         ? "Monthly Watch"
-        : form.plan === "yearly"
+        : snapshot.plan === "yearly"
           ? "Yearly Watch"
           : "Not specified";
     const subject =
-      form.plan === "monthly"
+      snapshot.plan === "monthly"
         ? "Monthly Home Watch Request"
-        : form.plan === "yearly"
+        : snapshot.plan === "yearly"
           ? "Yearly Home Watch Request"
           : "Home Watch Service Request";
 
     const payload = {
-      name: form.name.trim(),
-      email: form.email.trim(),
-      phone: form.phone.trim(),
+      name: snapshot.name.trim(),
+      email: snapshot.email.trim(),
+      phone: snapshot.phone.trim(),
       propertyType: propertyLabel,
       plan: selectedPlan,
-      message: form.message.trim(),
-      _replyto: form.email.trim(),
+      message: snapshot.message.trim(),
+      _replyto: snapshot.email.trim(),
       _subject: subject,
       _template: "table",
       _captcha: "false",
@@ -284,7 +314,7 @@ export default function HomePage() {
       const apiResponse = await fetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, website: honeypot }),
+        body: JSON.stringify({ ...snapshot, website: honeypot }),
       });
       const apiPayload = (await apiResponse.json()) as { error?: string };
 
@@ -308,30 +338,37 @@ export default function HomePage() {
           body: JSON.stringify(payload),
         },
       );
-      const submitPayload = (await submitResponse.json()) as {
-        success?: string | boolean;
-      };
+
+      let submitPayload: { success?: string | boolean } = {};
+      try {
+        submitPayload = (await submitResponse.json()) as {
+          success?: string | boolean;
+        };
+      } catch {
+        submitPayload = {};
+      }
 
       if (
         submitResponse.ok &&
         (submitPayload.success === true || submitPayload.success === "true")
       ) {
-        setSentTo(form.email);
+        setSentTo(snapshot.email);
         setForm(emptyForm);
         setHoneypot("");
+        sessionStorage.removeItem("jsm-request-draft");
         setStatus("success");
         return;
       }
 
-      event.currentTarget.querySelector<HTMLInputElement>(
-        'input[name="_next"]',
-      )!.value = `${window.location.origin}/?sent=1`;
-      event.currentTarget.submit();
+      setStatus("error");
+      setSendError(
+        `We couldn't send that just now. Email ${CONTACT_EMAIL} directly and we'll follow up.`,
+      );
     } catch {
-      event.currentTarget.querySelector<HTMLInputElement>(
-        'input[name="_next"]',
-      )!.value = `${window.location.origin}/?sent=1`;
-      event.currentTarget.submit();
+      setStatus("error");
+      setSendError(
+        `We couldn't send that just now. Email ${CONTACT_EMAIL} directly and we'll follow up.`,
+      );
     }
   }
 
@@ -361,7 +398,11 @@ export default function HomePage() {
     setErrors({});
     setSendError("");
     setStatus("idle");
-    setForm((current) => ({ ...current, plan }));
+    setForm((current) => {
+      const next = { ...current, plan };
+      writeDraft(next);
+      return next;
+    });
     setModalOpen(true);
     if (typeof window !== "undefined" && window.location.hash !== "#request-modal") {
       window.location.hash = "request-modal";
@@ -378,6 +419,17 @@ export default function HomePage() {
     }
 
     const timer = window.setTimeout(() => {
+      const draft = readDraft();
+      if (
+        draft.name ||
+        draft.email ||
+        draft.phone ||
+        draft.message ||
+        draft.propertyType ||
+        draft.plan
+      ) {
+        setForm(draft);
+      }
       if (sent) {
         setStatus("success");
         setModalOpen(true);
@@ -891,8 +943,6 @@ export default function HomePage() {
               </div>
             ) : (
             <form
-              action={`https://formsubmit.co/${CONTACT_EMAIL}`}
-              method="POST"
               onSubmit={onSubmit}
               className="overflow-y-auto px-5 py-5 sm:px-6"
               noValidate
@@ -908,7 +958,6 @@ export default function HomePage() {
                 <label>
                   Website
                   <input
-                    name="_honey"
                     tabIndex={-1}
                     autoComplete="off"
                     value={honeypot}
@@ -916,21 +965,6 @@ export default function HomePage() {
                   />
                 </label>
               </div>
-              <input type="hidden" name="_captcha" value="false" />
-              <input type="hidden" name="_template" value="table" />
-              <input type="hidden" name="_next" value="/?sent=1" />
-              <input type="hidden" name="_replyto" value={form.email} />
-              <input
-                type="hidden"
-                name="_subject"
-                value={
-                  form.plan === "monthly"
-                    ? "Monthly Home Watch Request"
-                    : form.plan === "yearly"
-                      ? "Yearly Home Watch Request"
-                      : "Home Watch Service Request"
-                }
-              />
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="flex flex-col gap-2 sm:col-span-2">
@@ -940,12 +974,7 @@ export default function HomePage() {
                     name="name"
                     autoComplete="name"
                     value={form.name}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        name: event.target.value,
-                      }))
-                    }
+                    onChange={(event) => patchForm({ name: event.target.value })}
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                     placeholder="Your full name"
                   />
@@ -961,12 +990,7 @@ export default function HomePage() {
                     type="email"
                     autoComplete="email"
                     value={form.email}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        email: event.target.value,
-                      }))
-                    }
+                    onChange={(event) => patchForm({ email: event.target.value })}
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                     placeholder="you@email.com"
                   />
@@ -984,12 +1008,7 @@ export default function HomePage() {
                     type="tel"
                     autoComplete="tel"
                     value={form.phone}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        phone: event.target.value,
-                      }))
-                    }
+                    onChange={(event) => patchForm({ phone: event.target.value })}
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                     placeholder="(231) 555-0148"
                   />
@@ -1006,10 +1025,9 @@ export default function HomePage() {
                     name="propertyType"
                     value={form.propertyType}
                     onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
+                      patchForm({
                         propertyType: event.target.value as PropertyType,
-                      }))
+                      })
                     }
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                   >
@@ -1033,10 +1051,7 @@ export default function HomePage() {
                     name="plan"
                     value={form.plan}
                     onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        plan: event.target.value as PlanType,
-                      }))
+                      patchForm({ plan: event.target.value as PlanType })
                     }
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                   >
@@ -1055,10 +1070,7 @@ export default function HomePage() {
                     rows={4}
                     value={form.message}
                     onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        message: event.target.value,
-                      }))
+                      patchForm({ message: event.target.value })
                     }
                     className="resize-y rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                     placeholder="Tell us about the property, travel schedule, and anything we should know."
