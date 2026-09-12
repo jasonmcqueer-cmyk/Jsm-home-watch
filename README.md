@@ -10,9 +10,9 @@ Tagline: *Peace of mind while you're away.*
 - Trust bar (insured, references, year-round care)
 - Six-service grid for home checks, seasonal care, storm visits, vendor access, photo updates, and complete watch
 - Monthly and yearly plan comparison
-- Lead-capture popup (name, email, phone, property type, plan, message) that opens from Request Service and plan CTAs, then emails `jsmhomewatch@yahoo.com`
+- Lead-capture popup that posts to `/api/contact` and emails `jsmhomewatch@yahoo.com`
 
-The entire page lives in `app/page.tsx` so the site stays a single responsive layout.
+The marketing page lives in `app/page.tsx`. Form delivery lives in `app/api/contact/route.ts`.
 
 ## Local development
 
@@ -36,4 +36,8 @@ npm start
 - Tailwind CSS
 - Lucide icons
 
-Deploy on Vercel with the default Next.js settings. No environment variables are required; the contact form uses a `mailto:` handoff to the published inbox.
+Deploy on Vercel with the default Next.js settings. No environment variables are required.
+
+The contact form is delivered to `jsmhomewatch@yahoo.com` through FormSubmit.
+
+The first live submission sends an activation email to that inbox. Open it, confirm once, and every request after that lands in Yahoo automatically.

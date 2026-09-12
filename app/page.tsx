@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import {
   ArrowRight,
   BadgeCheck,
@@ -10,6 +10,7 @@ import {
   Check,
   CloudLightning,
   Home,
+  Loader2,
   Mail,
   Menu,
   Phone,
@@ -134,7 +135,12 @@ export default function HomePage() {
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>(
     {},
   );
-  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [status, setStatus] = useState<
+    "idle" | "submitting" | "success" | "error"
+  >("idle");
+  const [sendError, setSendError] = useState("");
+  const [honeypot, setHoneypot] = useState("");
+  const [sentTo, setSentTo] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
 
   const planLabel =
@@ -143,45 +149,6 @@ export default function HomePage() {
       : form.plan === "yearly"
         ? "Yearly Watch"
         : "Not specified";
-
-  const mailtoHref = useMemo(() => {
-    const propertyLabel =
-      form.propertyType === "primary"
-        ? "Primary Home"
-        : form.propertyType === "vacation"
-          ? "Vacation Home"
-          : form.propertyType === "airbnb"
-            ? "Airbnb"
-            : "Not specified";
-
-    const selectedPlan =
-      form.plan === "monthly"
-        ? "Monthly Watch"
-        : form.plan === "yearly"
-          ? "Yearly Watch"
-          : "Not specified";
-
-    const subject =
-      form.plan === "monthly"
-        ? "Monthly Home Watch Request"
-        : form.plan === "yearly"
-          ? "Yearly Home Watch Request"
-          : "Home Watch Service Request";
-
-    const body = [
-      `Name: ${form.name}`,
-      `Email: ${form.email}`,
-      `Phone: ${form.phone}`,
-      `Property type: ${propertyLabel}`,
-      `Service plan: ${selectedPlan}`,
-      "",
-      form.message,
-    ].join("\n");
-
-    return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(
-      subject,
-    )}&body=${encodeURIComponent(body)}`;
-  }, [form]);
 
   function validate(next: FormState) {
     const nextErrors: Partial<Record<keyof FormState, string>> = {};
@@ -201,18 +168,106 @@ export default function HomePage() {
     return nextErrors;
   }
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const nextErrors = validate(form);
     setErrors(nextErrors);
+    setSendError("");
 
     if (Object.keys(nextErrors).length > 0) {
       setStatus("error");
       return;
     }
 
-    setStatus("success");
-    window.location.href = mailtoHref;
+    setStatus("submitting");
+
+    const propertyLabel =
+      form.propertyType === "primary"
+        ? "Primary Home"
+        : form.propertyType === "vacation"
+          ? "Vacation Home"
+          : form.propertyType === "airbnb"
+            ? "Airbnb"
+            : form.propertyType;
+    const selectedPlan =
+      form.plan === "monthly"
+        ? "Monthly Watch"
+        : form.plan === "yearly"
+          ? "Yearly Watch"
+          : "Not specified";
+    const subject =
+      form.plan === "monthly"
+        ? "Monthly Home Watch Request"
+        : form.plan === "yearly"
+          ? "Yearly Home Watch Request"
+          : "Home Watch Service Request";
+
+    const payload = {
+      name: form.name.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim(),
+      propertyType: propertyLabel,
+      plan: selectedPlan,
+      message: form.message.trim(),
+      _replyto: form.email.trim(),
+      _subject: subject,
+      _template: "table",
+      _captcha: "false",
+    };
+
+    try {
+      const apiResponse = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, website: honeypot }),
+      });
+      const apiPayload = (await apiResponse.json()) as { error?: string };
+
+      if (!apiResponse.ok) {
+        setStatus("error");
+        setSendError(
+          apiPayload.error ||
+            `We couldn't send that just now. Email ${CONTACT_EMAIL} directly.`,
+        );
+        return;
+      }
+
+      const submitResponse = await fetch(
+        `https://formsubmit.co/ajax/${CONTACT_EMAIL}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+      const submitPayload = (await submitResponse.json()) as {
+        success?: string | boolean;
+      };
+
+      if (
+        submitResponse.ok &&
+        (submitPayload.success === true || submitPayload.success === "true")
+      ) {
+        setSentTo(form.email);
+        setForm(emptyForm);
+        setHoneypot("");
+        setStatus("success");
+        return;
+      }
+
+      event.currentTarget.querySelector<HTMLInputElement>(
+        'input[name="_next"]',
+      )!.value = `${window.location.origin}/?sent=1`;
+      event.currentTarget.submit();
+    } catch {
+      event.currentTarget.querySelector<HTMLInputElement>(
+        'input[name="_next"]',
+      )!.value = `${window.location.origin}/?sent=1`;
+      event.currentTarget.submit();
+    }
   }
 
   function scrollToId(id: string) {
@@ -222,6 +277,11 @@ export default function HomePage() {
 
   function closeModal() {
     setModalOpen(false);
+    setSendError("");
+    if (status === "success") {
+      setStatus("idle");
+      setSentTo("");
+    }
     if (typeof window !== "undefined" && window.location.hash === "#request-modal") {
       window.history.replaceState(
         null,
@@ -234,6 +294,7 @@ export default function HomePage() {
   function requestService(plan: PlanType = "") {
     setMenuOpen(false);
     setErrors({});
+    setSendError("");
     setStatus("idle");
     setForm((current) => ({ ...current, plan }));
     setModalOpen(true);
@@ -243,13 +304,34 @@ export default function HomePage() {
   }
 
   useEffect(() => {
-    function syncFromHash() {
-      setModalOpen(window.location.hash === "#request-modal");
+    const params = new URLSearchParams(window.location.search);
+    const sent = params.get("sent") === "1";
+    const hashed = window.location.hash === "#request-modal";
+
+    if (sent) {
+      window.history.replaceState(null, "", window.location.pathname);
     }
 
-    syncFromHash();
+    const timer = window.setTimeout(() => {
+      if (sent) {
+        setStatus("success");
+        setModalOpen(true);
+      } else if (hashed) {
+        setModalOpen(true);
+      }
+    }, 0);
+
+    function syncFromHash() {
+      if (window.location.hash === "#request-modal") {
+        setModalOpen(true);
+      }
+    }
+
     window.addEventListener("hashchange", syncFromHash);
-    return () => window.removeEventListener("hashchange", syncFromHash);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("hashchange", syncFromHash);
+    };
   }, []);
 
   useEffect(() => {
@@ -701,7 +783,38 @@ export default function HomePage() {
               </a>
             </div>
 
+            {status === "success" ? (
+              <div className="px-5 py-10 text-center sm:px-6">
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gold/15 text-gold">
+                  <Check className="h-6 w-6" />
+                </span>
+                <h3 className="mt-4 font-display text-2xl font-bold text-forest">
+                  Request sent
+                </h3>
+                <p className="mt-3 text-sm text-forest/75">
+                  Thanks. We received your request
+                  {sentTo ? ` and will follow up at ${sentTo}` : ""}. If you
+                  don&apos;t hear back, email{" "}
+                  <a
+                    href={`mailto:${CONTACT_EMAIL}`}
+                    className="font-semibold text-lake"
+                  >
+                    {CONTACT_EMAIL}
+                  </a>
+                  .
+                </p>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className={`mt-6 ${goldButtonClass} px-7 py-3 text-sm uppercase`}
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
             <form
+              action={`https://formsubmit.co/${CONTACT_EMAIL}`}
+              method="POST"
               onSubmit={onSubmit}
               className="overflow-y-auto px-5 py-5 sm:px-6"
               noValidate
@@ -712,6 +825,34 @@ export default function HomePage() {
                   we&apos;ll follow up with scheduling.
                 </p>
               ) : null}
+
+              <div className="absolute -left-[9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
+                <label>
+                  Website
+                  <input
+                    name="_honey"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={honeypot}
+                    onChange={(event) => setHoneypot(event.target.value)}
+                  />
+                </label>
+              </div>
+              <input type="hidden" name="_captcha" value="false" />
+              <input type="hidden" name="_template" value="table" />
+              <input type="hidden" name="_next" value="/?sent=1" />
+              <input type="hidden" name="_replyto" value={form.email} />
+              <input
+                type="hidden"
+                name="_subject"
+                value={
+                  form.plan === "monthly"
+                    ? "Monthly Home Watch Request"
+                    : form.plan === "yearly"
+                      ? "Yearly Home Watch Request"
+                      : "Home Watch Service Request"
+                }
+              />
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="flex flex-col gap-2 sm:col-span-2">
@@ -850,15 +991,13 @@ export default function HomePage() {
                 </label>
               </div>
 
-              {status === "success" ? (
-                <p className="mt-5 rounded-xl bg-forest/10 px-4 py-3 text-sm text-forest">
-                  Thank you. Your email app should open with a message to{" "}
-                  <strong>{CONTACT_EMAIL}</strong>. If it doesn&apos;t, send us a
-                  note at that address and we&apos;ll be in touch.
+              {status === "error" && sendError ? (
+                <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">
+                  {sendError}
                 </p>
               ) : null}
 
-              {status === "error" ? (
+              {status === "error" && !sendError ? (
                 <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">
                   Please complete the highlighted fields so we can follow up.
                 </p>
@@ -866,12 +1005,23 @@ export default function HomePage() {
 
               <button
                 type="submit"
-                className={`mt-6 w-full ${goldButtonClass} px-6 py-3.5 text-sm tracking-wide uppercase`}
+                disabled={status === "submitting"}
+                className={`mt-6 w-full ${goldButtonClass} px-6 py-3.5 text-sm tracking-wide uppercase disabled:cursor-wait disabled:opacity-70`}
               >
-                Send service request
-                <ArrowRight className="h-4 w-4" />
+                {status === "submitting" ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Sending
+                  </>
+                ) : (
+                  <>
+                    Send service request
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
               </button>
             </form>
+            )}
           </div>
       </div>
     </div>
