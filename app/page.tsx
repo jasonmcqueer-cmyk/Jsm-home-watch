@@ -222,6 +222,13 @@ export default function HomePage() {
 
   function closeModal() {
     setModalOpen(false);
+    if (typeof window !== "undefined" && window.location.hash === "#request-modal") {
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${window.location.search}`,
+      );
+    }
   }
 
   function requestService(plan: PlanType = "") {
@@ -230,7 +237,20 @@ export default function HomePage() {
     setStatus("idle");
     setForm((current) => ({ ...current, plan }));
     setModalOpen(true);
+    if (typeof window !== "undefined" && window.location.hash !== "#request-modal") {
+      window.location.hash = "request-modal";
+    }
   }
+
+  useEffect(() => {
+    function syncFromHash() {
+      setModalOpen(window.location.hash === "#request-modal");
+    }
+
+    syncFromHash();
+    window.addEventListener("hashchange", syncFromHash);
+    return () => window.removeEventListener("hashchange", syncFromHash);
+  }, []);
 
   useEffect(() => {
     if (!modalOpen) return;
@@ -284,14 +304,14 @@ export default function HomePage() {
             <a href="#contact" className="transition hover:text-gold">
               Contact
             </a>
-            <button
-              type="button"
-              onClick={() => requestService()}
-              className={goldButtonClass}
-            >
-              Request Service
-              <ArrowRight className="h-4 w-4" />
-            </button>
+              <a
+                href="#request-modal"
+                onClick={() => requestService()}
+                className={goldButtonClass}
+              >
+                Request Service
+                <ArrowRight className="h-4 w-4" />
+              </a>
           </nav>
 
           <button
@@ -328,13 +348,13 @@ export default function HomePage() {
               >
                 Contact
               </a>
-              <button
-                type="button"
+              <a
+                href="#request-modal"
                 onClick={() => requestService()}
                 className={`mt-1 ${goldButtonClass} py-3`}
               >
                 Request Service
-              </button>
+              </a>
             </div>
           </div>
         ) : null}
@@ -345,8 +365,8 @@ export default function HomePage() {
           className="relative min-h-[92vh] overflow-hidden bg-forest-deep bg-cover bg-center"
           style={{ backgroundImage: "url('/hero-lakefront.png')" }}
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-forest-deep/45 via-forest/35 to-forest-deep/92" />
-          <div className="relative mx-auto flex min-h-[92vh] max-w-6xl flex-col justify-end px-4 pb-16 pt-28 sm:px-6 sm:pb-20">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-forest-deep/45 via-forest/35 to-forest-deep/92" />
+          <div className="relative z-10 mx-auto flex min-h-[92vh] max-w-6xl flex-col justify-end px-4 pb-16 pt-28 sm:px-6 sm:pb-20">
             <div className="max-w-3xl text-white">
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-gold/70 bg-forest-deep/55 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-gold backdrop-blur-sm sm:text-sm">
                 <MichiganMark className="h-6 w-5 text-gold" />
@@ -360,21 +380,21 @@ export default function HomePage() {
                 cottages, and year-round homes across Northern Michigan.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
+                <a
+                  href="#request-modal"
                   onClick={() => requestService()}
-                  className={`${goldButtonClass} px-7 py-3.5 text-sm tracking-wide uppercase`}
+                  className={`${goldButtonClass} pointer-events-auto px-7 py-3.5 text-sm tracking-wide uppercase`}
                 >
                   Request Service
                   <ArrowRight className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
+                </a>
+                <a
+                  href="#request-modal"
                   onClick={() => requestService()}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/80 px-7 py-3.5 text-sm font-bold tracking-wide text-white uppercase transition hover:-translate-y-0.5 hover:bg-white hover:text-forest-deep"
+                  className="pointer-events-auto inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/80 px-7 py-3.5 text-sm font-bold tracking-wide text-white uppercase transition hover:-translate-y-0.5 hover:bg-white hover:text-forest-deep"
                 >
                   Get in Touch
-                </button>
+                </a>
               </div>
             </div>
           </div>
@@ -512,14 +532,14 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <button
-                  type="button"
+                <a
+                  href="#request-modal"
                   onClick={() => requestService("monthly")}
                   className="mt-8 inline-flex items-center justify-center gap-2 rounded-full border-2 border-forest px-6 py-3 text-sm font-bold text-forest uppercase transition hover:-translate-y-0.5 hover:bg-forest hover:text-white hover:shadow-md"
                 >
                   Request monthly service
                   <ArrowRight className="h-4 w-4" />
-                </button>
+                </a>
               </article>
 
               <article className="relative flex flex-col rounded-3xl border-2 border-gold bg-forest p-8 text-white shadow-xl">
@@ -547,14 +567,14 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <button
-                  type="button"
+                <a
+                  href="#request-modal"
                   onClick={() => requestService("yearly")}
                   className={`mt-8 ${goldButtonClass} px-6 py-3 text-sm uppercase`}
                 >
                   Request yearly service
                   <ArrowRight className="h-4 w-4" />
-                </button>
+                </a>
               </article>
             </div>
           </div>
@@ -581,14 +601,14 @@ export default function HomePage() {
                 .
               </p>
             </div>
-            <button
-              type="button"
+            <a
+              href="#request-modal"
               onClick={() => requestService()}
               className={`${goldButtonClass} shrink-0 px-7 py-3.5 text-sm uppercase`}
             >
               Request Service
               <ArrowRight className="h-4 w-4" />
-            </button>
+            </a>
           </div>
         </section>
       </main>
@@ -639,20 +659,23 @@ export default function HomePage() {
         </div>
       </footer>
 
-      {modalOpen ? (
-        <div className="fixed inset-0 z-[80] flex items-end justify-center p-0 sm:items-center sm:p-6">
-          <button
-            type="button"
-            aria-label="Close request form"
-            className="absolute inset-0 bg-forest-deep/70 backdrop-blur-sm"
-            onClick={closeModal}
-          />
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="request-title"
-            className="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
-          >
+      <div
+        id="request-modal"
+        className={modalOpen ? "is-open" : undefined}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="request-title"
+      >
+        <a
+          href="#top"
+          aria-label="Close request form"
+          className="absolute inset-0"
+          onClick={(event) => {
+            event.preventDefault();
+            closeModal();
+          }}
+        />
+        <div className="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
             <div className="flex items-start justify-between gap-4 border-b border-forest/10 px-5 py-4 sm:px-6">
               <div>
                 <p className="text-xs font-bold tracking-[0.18em] text-lake uppercase">
@@ -665,14 +688,17 @@ export default function HomePage() {
                   Tell us about the property
                 </h2>
               </div>
-              <button
-                type="button"
-                onClick={closeModal}
+              <a
+                href="#top"
+                onClick={(event) => {
+                  event.preventDefault();
+                  closeModal();
+                }}
                 className="rounded-full p-2 text-forest/60 transition hover:bg-cream hover:text-forest"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
-              </button>
+              </a>
             </div>
 
             <form
@@ -847,8 +873,7 @@ export default function HomePage() {
               </button>
             </form>
           </div>
-        </div>
-      ) : null}
+      </div>
     </div>
   );
 }
