@@ -3,80 +3,145 @@
 import { FormEvent, useEffect, useState } from "react";
 import {
   ArrowRight,
+  Award,
   BadgeCheck,
-  Building2,
   CalendarRange,
-  Camera,
   Check,
-  CloudLightning,
-  Home,
+  ClipboardCheck,
+  ConciergeBell,
+  KeyRound,
   Loader2,
   Mail,
   Menu,
   Phone,
   ShieldCheck,
-  Snowflake,
   Trees,
+  UserCheck,
   Users,
-  Wrench,
   X,
 } from "lucide-react";
 
 const CONTACT_EMAIL = "jsmhomewatch@yahoo.com";
 
-const services = [
+const trustBadges = [
   {
-    icon: Home,
-    title: "Scheduled Home Checks",
-    description:
-      "Interior and exterior walkthroughs on a cadence that matches how often you travel — so small issues never become expensive surprises.",
+    icon: ShieldCheck,
+    title: "Fully Insured Business",
+    detail: "Professional coverage on every visit",
   },
   {
-    icon: Snowflake,
-    title: "Seasonal & Vacation Home Care",
-    description:
-      "Open, close, and watch over Northern Michigan homes through freeze-up, thaw, and peak summer occupancy.",
+    icon: UserCheck,
+    title: "Background-Checked",
+    detail: "Owners and employees are screened",
   },
   {
-    icon: CloudLightning,
-    title: "Storm & Exterior Checks",
-    description:
-      "After high wind, heavy snow, or hard rain, we inspect roofs, trees, shoreline, and entry points and send you what we find.",
+    icon: Users,
+    title: "References Available",
+    detail: "Ask about nearby owners we serve",
   },
   {
-    icon: Wrench,
-    title: "Vendor & Maintenance Access",
-    description:
-      "We meet contractors, let in service techs, and keep a clear record of who was on the property while you are away.",
+    icon: Award,
+    title: "Community Reputation",
+    detail: "Restaurant owners with local roots",
+  },
+];
+
+const serviceCategories = [
+  {
+    icon: ClipboardCheck,
+    title: "Home Watch & Property Inspection",
+    items: [
+      {
+        text: "Scheduled interior and exterior checks with written inspection checklists",
+      },
+      {
+        text: "Date- and time-stamped photo updates sent after every visit",
+      },
+      {
+        text: "Mailbox checks, package retrieval, and secure key-handling procedures",
+      },
+      {
+        text: "Walk-throughs for real estate sales when listing agents are unavailable",
+      },
+      {
+        text: "Immediate alerts and visual documentation if any issue arises",
+      },
+    ],
   },
   {
-    icon: Camera,
-    title: "Photo Updates",
-    description:
-      "Every visit includes dated photos so you can see the property — docks, interiors, and grounds — without making the drive.",
+    icon: Trees,
+    title: "Grounds & Exterior Care",
+    items: [
+      {
+        name: "Lawn Care & Maintenance",
+        text: "Seasonal mowing, trimming, and yard upkeep",
+      },
+      {
+        name: "Snow Removal",
+        text: "Clearing driveways, walkways, and entryways",
+      },
+      {
+        name: "Window Cleaning",
+        text: "Interior and exterior glass cleaning",
+      },
+      {
+        name: "Power Washing",
+        text: "Exterior siding, decks, patios, and driveways",
+      },
+    ],
   },
   {
-    icon: Building2,
-    title: "Complete Home Watch",
-    description:
-      "One dependable watch for primary homes, vacation homes, and Airbnbs. Same care, tailored to how each property is used.",
+    icon: KeyRound,
+    title: "Turnkey Airbnb & Short-Term Rental Co-Hosting",
+    items: [
+      {
+        name: "Full Co-Hosting",
+        text: "End-to-end guest communication and inquiry management",
+      },
+      {
+        name: "Turnover Management",
+        text: "Professional cleaning scheduling, inspections, and supply restocking",
+      },
+      {
+        name: "Fee & Booking Administration",
+        text: "Managing nightly rates, cleaning fees, and guest support",
+      },
+    ],
+  },
+  {
+    icon: ConciergeBell,
+    title: "Concierge & Arrival Prep",
+    items: [
+      {
+        name: "Arrival Stocking",
+        text: "Pre-arrival grocery, beverage, and household supply delivery",
+      },
+      {
+        name: "Vendor Supervision",
+        text: "Meeting local contractors and supervising work on site",
+      },
+      {
+        name: "Trusted Local Contractor Network",
+        text: "Access to service partners for specialized maintenance",
+      },
+    ],
   },
 ];
 
 const monthlyFeatures = [
-  "Flexible month-to-month checks",
-  "Photo update after every visit",
-  "Storm-response exterior walkthroughs",
-  "Vendor meet-and-greet as needed",
+  "Any mix of home watch, grounds, co-hosting, and concierge care",
+  "Flexible month-to-month scheduling",
+  "Written checklists and stamped photos after visits",
+  "Immediate alerts when something is wrong",
   "Pause around your travel calendar",
 ];
 
 const yearlyFeatures = [
   "Everything in monthly service",
-  "Priority scheduling year-round",
-  "Pre-season open and close visits",
-  "Off-season exterior monitoring",
-  "Dedicated notes for vendors and caretakers",
+  "Priority scheduling in every season",
+  "Pre-season open, close, and arrival prep",
+  "Snow, lawn, and exterior care on a set cadence",
+  "Dedicated notes for vendors, cleaners, and guests",
   "Best value for vacation homes and Airbnbs",
 ];
 
@@ -483,46 +548,23 @@ export default function HomePage() {
         </section>
 
         <section className="bg-forest text-white">
-          <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:grid-cols-3 sm:px-6">
-            <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gold/15 text-gold">
-                <ShieldCheck className="h-6 w-6" />
-              </span>
-              <div>
-                <p className="text-xs font-bold tracking-[0.2em] text-gold uppercase">
-                  Insured
-                </p>
-                <p className="text-sm text-white/80">
-                  Professional coverage on every visit
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gold/15 text-gold">
-                <Users className="h-6 w-6" />
-              </span>
-              <div>
-                <p className="text-xs font-bold tracking-[0.2em] text-gold uppercase">
-                  References Available
-                </p>
-                <p className="text-sm text-white/80">
-                  Ask about nearby property owners we serve
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gold/15 text-gold">
-                <Trees className="h-6 w-6" />
-              </span>
-              <div>
-                <p className="text-xs font-bold tracking-[0.2em] text-gold uppercase">
-                  Every Season
-                </p>
-                <p className="text-sm text-white/80">
-                  Dependable property care year-round
-                </p>
-              </div>
-            </div>
+          <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:grid-cols-2 lg:grid-cols-4 sm:px-6">
+            {trustBadges.map((badge) => {
+              const Icon = badge.icon;
+              return (
+                <div key={badge.title} className="flex items-center gap-3">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gold/15 text-gold">
+                    <Icon className="h-6 w-6" />
+                  </span>
+                  <div>
+                    <p className="text-xs font-bold tracking-[0.14em] text-gold uppercase">
+                      {badge.title}
+                    </p>
+                    <p className="text-sm text-white/80">{badge.detail}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
 
@@ -532,39 +574,75 @@ export default function HomePage() {
               Core Services
             </p>
             <h2 className="mt-3 font-display text-3xl font-bold text-forest sm:text-4xl">
-              Professional home watch, done the Northern Michigan way
+              Full-service care for Northern Michigan homes
             </h2>
             <p className="mt-4 max-w-2xl text-base text-forest/75 sm:text-lg">
-              Whether the house sits on the water or back in the woods, we keep
-              a careful eye on it — then send you proof that everything is as it
-              should be.
+              Home watch, grounds, co-hosting, and concierge support — all
+              available on flexible monthly or yearly plans.
             </p>
 
-            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {services.map((service) => {
-                const Icon = service.icon;
+            <div className="mt-12 grid gap-6 lg:grid-cols-2">
+              {serviceCategories.map((category) => {
+                const Icon = category.icon;
                 return (
                   <article
-                    key={service.title}
-                    className="rounded-2xl border border-forest/10 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                    key={category.title}
+                    className="rounded-2xl border border-forest/10 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg sm:p-8"
                   >
                     <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-lake/10 text-lake">
                       <Icon className="h-6 w-6" />
                     </span>
-                    <h3 className="mt-5 font-display text-xl font-semibold text-forest">
-                      {service.title}
+                    <h3 className="mt-5 font-display text-xl font-semibold text-forest sm:text-2xl">
+                      {category.title}
                     </h3>
-                    <p className="mt-3 text-sm leading-relaxed text-forest/70">
-                      {service.description}
-                    </p>
+                    <ul className="mt-5 flex flex-col gap-3">
+                      {category.items.map((item) => (
+                        <li
+                          key={`${category.title}-${item.name ?? item.text}`}
+                          className="flex items-start gap-3 text-sm leading-relaxed text-forest/75"
+                        >
+                          <Check className="mt-0.5 h-5 w-5 shrink-0 text-lake" />
+                          <span>
+                            {item.name ? (
+                              <>
+                                <span className="font-semibold text-forest">
+                                  {item.name}:
+                                </span>{" "}
+                                {item.text}
+                              </>
+                            ) : (
+                              item.text
+                            )}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   </article>
                 );
               })}
             </div>
 
-            <div className="mt-12 rounded-2xl bg-forest px-6 py-8 text-center text-white sm:px-10">
+            <div className="mt-10 rounded-2xl border border-gold/40 bg-white px-6 py-6 text-center sm:px-10">
+              <p className="text-sm font-bold tracking-[0.18em] text-lake uppercase">
+                Flexible monthly or yearly service
+              </p>
+              <p className="mt-2 text-base text-forest/75">
+                Every offering below can be scheduled month-to-month or as a
+                year-round plan. Written agreements, inspection checklists, and
+                stamped photos come with the watch.
+              </p>
+              <a
+                href="#plans"
+                className="mt-4 inline-flex items-center justify-center gap-2 font-semibold text-forest hover:text-lake"
+              >
+                Compare plans
+                <ArrowRight className="h-4 w-4" />
+              </a>
+            </div>
+
+            <div className="mt-6 rounded-2xl bg-forest px-6 py-8 text-center text-white sm:px-10">
               <p className="text-sm font-bold tracking-[0.2em] text-gold uppercase">
-                Complete home watch for every property
+                Complete care for every property
               </p>
               <div className="mt-4 flex flex-col items-center justify-center gap-3 text-lg font-semibold sm:flex-row sm:gap-8">
                 <span>Primary Homes</span>
@@ -586,9 +664,9 @@ export default function HomePage() {
               Flexible monthly or yearly service
             </h2>
             <p className="mt-4 max-w-2xl text-base text-forest/75 sm:text-lg">
-              Choose the cadence that matches how you use the property. We&apos;ll
-              tailor visit frequency, vendor access, and photo updates after a
-              short conversation.
+              Home watch, grounds, Airbnb co-hosting, and concierge care can all
+              run on a monthly or yearly plan. We&apos;ll match the mix to how
+              you use the property.
             </p>
 
             <div className="mt-12 grid gap-8 lg:grid-cols-2">
@@ -731,7 +809,7 @@ export default function HomePage() {
               Airbnbs.
             </p>
             <p className="mt-4 text-xs font-bold tracking-[0.16em] text-white/80 uppercase">
-              Insured · References available
+              Fully insured · Background-checked · References available
             </p>
           </div>
         </div>

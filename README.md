@@ -7,8 +7,8 @@ Tagline: *Peace of mind while you're away.*
 ## What’s included
 
 - Full-width lakefront hero with service-area badge and primary CTAs
-- Trust bar (insured, references, year-round care)
-- Six-service grid for home checks, seasonal care, storm visits, vendor access, photo updates, and complete watch
+- Trust bar (insured, background-checked, references, community reputation)
+- Four service categories: home watch, grounds & exterior, Airbnb co-hosting, and concierge
 - Monthly and yearly plan comparison
 - Lead-capture popup that posts to `/api/contact` and emails `jsmhomewatch@yahoo.com`
 
