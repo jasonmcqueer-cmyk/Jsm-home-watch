@@ -145,6 +145,10 @@
           if (statusNode) {
             statusNode.textContent = "Request received. We’ll follow up by email.";
           }
+          var formEl = document.getElementById("request-service-form");
+          var panel = document.getElementById("request-success-panel");
+          if (formEl) formEl.hidden = true;
+          if (panel) panel.hidden = false;
           notify("jsm-request-result", { ok: true, email: parsed.email });
           fetch("https://formsubmit.co/ajax/" + CONTACT_EMAIL, {
             method: "POST",

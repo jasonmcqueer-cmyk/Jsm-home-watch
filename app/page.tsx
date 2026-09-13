@@ -958,8 +958,11 @@ export default function HomePage() {
               </a>
             </div>
 
-            {status === "success" ? (
-              <div className="px-5 py-10 text-center sm:px-6">
+            <div
+              id="request-success-panel"
+              hidden={status !== "success"}
+              className="px-5 py-10 text-center sm:px-6"
+            >
                 <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gold/15 text-gold">
                   <Check className="h-6 w-6" />
                 </span>
@@ -989,12 +992,12 @@ export default function HomePage() {
                 >
                   Done
                 </a>
-              </div>
-            ) : (
+            </div>
             <form
               id="request-service-form"
               data-react="ready"
               onSubmit={onSubmit}
+              hidden={status === "success"}
               className="overflow-y-auto px-5 py-5 sm:px-6"
               noValidate
             >
@@ -1170,7 +1173,6 @@ export default function HomePage() {
                 )}
               </button>
             </form>
-            )}
         </div>
       </dialog>
     </div>
