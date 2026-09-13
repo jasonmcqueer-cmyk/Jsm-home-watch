@@ -1,4 +1,7 @@
 (function () {
+  var CONTACT_EMAIL = "jsmhomewatch@yahoo.com";
+  var sending = false;
+
   function dialogEl() {
     return document.getElementById("request-service");
   }
@@ -59,6 +62,122 @@
     }
   }
 
+  function notify(name, detail) {
+    document.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
+  }
+
+  function fieldValue(form, name) {
+    var el = form.querySelector('[name="' + name + '"]');
+    return el && typeof el.value === "string" ? el.value.trim() : "";
+  }
+
+  function validate(form) {
+    var name = fieldValue(form, "name");
+    var email = fieldValue(form, "email");
+    var phone = fieldValue(form, "phone");
+    var propertyType = fieldValue(form, "propertyType");
+    var message = fieldValue(form, "message");
+    var errors = {};
+    if (!name) errors.name = "Please enter your name.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errors.email = "Enter a valid email address.";
+    }
+    if (phone.replace(/\D/g, "").length < 10) {
+      errors.phone = "Enter a 10-digit phone number.";
+    }
+    if (!propertyType) errors.propertyType = "Select a property type.";
+    if (message.length < 10) {
+      errors.message = "Tell us a bit about the property or what you need.";
+    }
+    return { name: name, email: email, phone: phone, propertyType: propertyType, message: message, errors: errors };
+  }
+
+  function sendForm(form) {
+    if (sending) return;
+    var parsed = validate(form);
+    if (Object.keys(parsed.errors).length) {
+      notify("jsm-request-result", {
+        ok: false,
+        errors: parsed.errors,
+        error: "Please complete the highlighted fields so we can follow up.",
+      });
+      return;
+    }
+
+    sending = true;
+    notify("jsm-request-start", {});
+    var statusNode = document.getElementById("request-send-status");
+    if (statusNode) {
+      statusNode.hidden = false;
+      statusNode.textContent = "Sending…";
+    }
+
+    var plan = fieldValue(form, "plan");
+    var subject =
+      plan === "monthly"
+        ? "Monthly Home Watch Request"
+        : plan === "yearly"
+          ? "Yearly Home Watch Request"
+          : "Home Watch Service Request";
+
+    fetch("https://formsubmit.co/ajax/" + CONTACT_EMAIL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        name: parsed.name,
+        email: parsed.email,
+        phone: parsed.phone,
+        "Property Type": parsed.propertyType,
+        "Service Plan": plan || "Not specified",
+        message: parsed.message,
+        _subject: subject,
+        _template: "table",
+        _captcha: "false",
+      }),
+    })
+      .then(function (response) {
+        return response.json().then(function (body) {
+          return { status: response.status, body: body || {} };
+        });
+      })
+      .then(function (result) {
+        var success =
+          result.body.success === true || result.body.success === "true";
+        var message = result.body.message || "";
+        var activate = /activat/i.test(message) && !success;
+        if (success) {
+          if (statusNode) {
+            statusNode.textContent = "Request sent. We’ll follow up by email.";
+          }
+          notify("jsm-request-result", { ok: true, email: parsed.email });
+          form.reset();
+          return;
+        }
+        var error = activate
+          ? "Check " +
+            CONTACT_EMAIL +
+            " (and spam) for an email from FormSubmit. Click Activate Form once, then send this request again."
+          : message ||
+            "We couldn’t send that just now. Email " +
+              CONTACT_EMAIL +
+              " directly.";
+        if (statusNode) statusNode.textContent = error;
+        notify("jsm-request-result", { ok: false, activate: activate, error: error });
+      })
+      .catch(function () {
+        var error =
+          "We couldn’t send that just now. Email " + CONTACT_EMAIL + " directly.";
+        if (statusNode) statusNode.textContent = error;
+        notify("jsm-request-result", { ok: false, error: error });
+      })
+      .then(function () {
+        sending = false;
+      });
+  }
+
   document.addEventListener(
     "click",
     function (event) {
@@ -87,68 +206,19 @@
     if (event.target === dialog) closeDialog();
   });
 
-  if (location.hash === "#request-service") {
-    openDialog("");
-  }
-
   document.addEventListener(
     "submit",
     function (event) {
       var form = event.target;
       if (!form || form.id !== "request-service-form") return;
       event.preventDefault();
-      if (form.getAttribute("data-react") === "ready") return;
-      event.stopPropagation();
-      sendWithoutReact(form);
+      event.stopImmediatePropagation();
+      sendForm(form);
     },
     true,
   );
 
-  function sendWithoutReact(form) {
-    if (form.getAttribute("data-sending") === "1") return;
-    form.setAttribute("data-sending", "1");
-
-    var statusNode = document.getElementById("request-send-status");
-    if (statusNode) {
-      statusNode.hidden = false;
-      statusNode.textContent = "Sending…";
-    }
-
-    var data = new FormData(form);
-    var payload = {};
-    data.forEach(function (value, key) {
-      payload[key] = value;
-    });
-
-    fetch("/api/contact", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(payload),
-    })
-      .then(function (response) {
-        return response.json().then(function (body) {
-          return { ok: response.ok, body: body };
-        });
-      })
-      .then(function (result) {
-        if (statusNode) {
-          statusNode.textContent = result.body && result.body.ok
-            ? "Request sent. We’ll follow up by email."
-            : (result.body && result.body.error) ||
-              "We couldn’t send that just now.";
-        }
-      })
-      .catch(function () {
-        if (statusNode) {
-          statusNode.textContent =
-            "We couldn’t send that just now. Email jsmhomewatch@yahoo.com directly.";
-        }
-      })
-      .then(function () {
-        form.removeAttribute("data-sending");
-      });
+  if (location.hash === "#request-service") {
+    openDialog("");
   }
 })();

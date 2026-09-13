@@ -268,87 +268,9 @@ export default function HomePage() {
     });
   }
 
-  function validate(next: FormState) {
-    const nextErrors: Partial<Record<keyof FormState, string>> = {};
-    if (!next.name.trim()) nextErrors.name = "Please enter your name.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next.email.trim())) {
-      nextErrors.email = "Enter a valid email address.";
-    }
-    if (next.phone.replace(/\D/g, "").length < 10) {
-      nextErrors.phone = "Enter a 10-digit phone number.";
-    }
-    if (!next.propertyType) {
-      nextErrors.propertyType = "Select a property type.";
-    }
-    if (next.message.trim().length < 10) {
-      nextErrors.message = "Tell us a bit about the property or what you need.";
-    }
-    return nextErrors;
-  }
-
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     event.stopPropagation();
-    if (event.currentTarget.getAttribute("data-sending") === "1") return;
-
-    const nextErrors = validate(form);
-    setErrors(nextErrors);
-    setSendError("");
-
-    if (Object.keys(nextErrors).length > 0) {
-      setStatus("error");
-      return;
-    }
-
-    setStatus("submitting");
-
-    const snapshot = { ...form };
-
-    const payload = {
-      name: snapshot.name.trim(),
-      email: snapshot.email.trim(),
-      phone: snapshot.phone.trim(),
-      propertyType: snapshot.propertyType,
-      plan: snapshot.plan,
-      message: snapshot.message.trim(),
-      website: honeypot,
-    };
-
-    try {
-      const apiResponse = await fetch("/api/contact", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-      const apiPayload = (await apiResponse.json()) as {
-        error?: string;
-        ok?: boolean;
-        activate?: boolean;
-      };
-
-      if (apiPayload.ok) {
-        setSentTo(snapshot.email);
-        setForm(emptyForm);
-        setHoneypot("");
-        sessionStorage.removeItem("jsm-request-draft");
-        setStatus("success");
-        return;
-      }
-
-      setStatus("error");
-      setSendError(
-        apiPayload.error ||
-          `We couldn't send that just now. Email ${CONTACT_EMAIL} directly.`,
-      );
-    } catch {
-      setStatus("error");
-      setSendError(
-        `We couldn't send that just now. Email ${CONTACT_EMAIL} directly and we'll follow up.`,
-      );
-    }
   }
 
   function scrollToId(id: string) {
@@ -425,9 +347,36 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    const form = document.getElementById("request-service-form");
-    form?.setAttribute("data-react", "ready");
-    return () => form?.removeAttribute("data-react");
+    const onStart = () => {
+      setStatus("submitting");
+      setSendError("");
+    };
+    const onResult = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        ok?: boolean;
+        email?: string;
+        error?: string;
+        errors?: Partial<Record<keyof FormState, string>>;
+      }>).detail;
+      if (detail.errors) setErrors(detail.errors);
+      else setErrors({});
+      if (detail.ok) {
+        setSentTo(detail.email || "");
+        setForm(emptyForm);
+        setHoneypot("");
+        sessionStorage.removeItem("jsm-request-draft");
+        setStatus("success");
+        return;
+      }
+      setStatus("error");
+      setSendError(detail.error || "");
+    };
+    document.addEventListener("jsm-request-start", onStart);
+    document.addEventListener("jsm-request-result", onResult);
+    return () => {
+      document.removeEventListener("jsm-request-start", onStart);
+      document.removeEventListener("jsm-request-result", onResult);
+    };
   }, []);
 
   return (
