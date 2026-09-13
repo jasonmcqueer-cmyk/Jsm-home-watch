@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useLayoutEffect, useState } from "react";
 import {
   ArrowRight,
   Award,
@@ -381,71 +381,53 @@ export default function HomePage() {
       setStatus("idle");
       setSentTo("");
     }
-    if (typeof window !== "undefined" && window.location.hash === "#request-modal") {
-      window.history.replaceState(
-        null,
-        "",
-        `${window.location.pathname}${window.location.search}`,
-      );
-    }
   }
 
   function requestService(plan: PlanType = "") {
     setMenuOpen(false);
     setErrors({});
     setSendError("");
-    setStatus("idle");
+    if (status === "success") {
+      setStatus("idle");
+      setSentTo("");
+    } else {
+      setStatus((current) => (current === "submitting" ? current : "idle"));
+    }
     setForm((current) => {
-      const next = { ...current, plan };
+      const next = plan ? { ...current, plan } : current;
       writeDraft(next);
       return next;
     });
     setModalOpen(true);
-    if (typeof window !== "undefined" && window.location.hash !== "#request-modal") {
-      window.location.hash = "request-modal";
-    }
   }
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sent = params.get("sent") === "1";
-    const hashed = window.location.hash === "#request-modal";
-
-    if (sent) {
-      window.history.replaceState(null, "", window.location.pathname);
+  useLayoutEffect(() => {
+    const draft = readDraft();
+    if (
+      !draft.name &&
+      !draft.email &&
+      !draft.phone &&
+      !draft.message &&
+      !draft.propertyType &&
+      !draft.plan
+    ) {
+      return;
     }
 
-    const timer = window.setTimeout(() => {
-      const draft = readDraft();
-      if (
-        draft.name ||
-        draft.email ||
-        draft.phone ||
-        draft.message ||
-        draft.propertyType ||
-        draft.plan
-      ) {
-        setForm(draft);
-      }
-      if (sent) {
-        setStatus("success");
-        setModalOpen(true);
-      } else if (hashed) {
-        setModalOpen(true);
-      }
-    }, 0);
+    const frame = window.requestAnimationFrame(() => {
+      setForm((current) => {
+        const empty =
+          !current.name &&
+          !current.email &&
+          !current.phone &&
+          !current.message &&
+          !current.propertyType &&
+          !current.plan;
+        return empty ? draft : current;
+      });
+    });
 
-    function syncFromHash() {
-      if (window.location.hash === "#request-modal") {
-        setModalOpen(true);
-      }
-    }
-
-    window.addEventListener("hashchange", syncFromHash);
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener("hashchange", syncFromHash);
-    };
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
@@ -460,6 +442,9 @@ export default function HomePage() {
     document.addEventListener("keydown", onKeyDown);
 
     const focusTimer = window.setTimeout(() => {
+      const active = document.activeElement;
+      const modal = document.getElementById("request-modal");
+      if (modal?.contains(active)) return;
       document.getElementById("contact-name")?.focus();
     }, 40);
 
@@ -477,7 +462,10 @@ export default function HomePage() {
           <a
             href="#top"
             className="flex items-center rounded-xl bg-cream px-2 py-1"
-            onClick={() => scrollToId("top")}
+            onClick={(event) => {
+              event.preventDefault();
+              scrollToId("top");
+            }}
           >
             <Logo className="h-12 w-auto sm:h-16" />
           </a>
@@ -500,14 +488,14 @@ export default function HomePage() {
             <a href="#contact" className="transition hover:text-gold">
               Contact
             </a>
-              <a
-                href="#request-modal"
-                onClick={() => requestService()}
-                className={goldButtonClass}
-              >
-                Request Service
-                <ArrowRight className="h-4 w-4" />
-              </a>
+            <button
+              type="button"
+              onClick={() => requestService()}
+              className={goldButtonClass}
+            >
+              Request Service
+              <ArrowRight className="h-4 w-4" />
+            </button>
           </nav>
 
           <button
@@ -544,13 +532,13 @@ export default function HomePage() {
               >
                 Contact
               </a>
-              <a
-                href="#request-modal"
+              <button
+                type="button"
                 onClick={() => requestService()}
                 className={`mt-1 ${goldButtonClass} py-3`}
               >
                 Request Service
-              </a>
+              </button>
             </div>
           </div>
         ) : null}
@@ -576,21 +564,21 @@ export default function HomePage() {
                 cottages, and year-round homes across Northern Michigan.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <a
-                  href="#request-modal"
+                <button
+                  type="button"
                   onClick={() => requestService()}
                   className={`${goldButtonClass} pointer-events-auto px-7 py-3.5 text-sm tracking-wide uppercase`}
                 >
                   Request Service
                   <ArrowRight className="h-4 w-4" />
-                </a>
-                <a
-                  href="#request-modal"
+                </button>
+                <button
+                  type="button"
                   onClick={() => requestService()}
                   className="pointer-events-auto inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/80 px-7 py-3.5 text-sm font-bold tracking-wide text-white uppercase transition hover:-translate-y-0.5 hover:bg-white hover:text-forest-deep"
                 >
                   Get in Touch
-                </a>
+                </button>
               </div>
             </div>
           </div>
@@ -741,14 +729,14 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <a
-                  href="#request-modal"
+                <button
+                  type="button"
                   onClick={() => requestService("monthly")}
                   className="mt-8 inline-flex items-center justify-center gap-2 rounded-full border-2 border-forest px-6 py-3 text-sm font-bold text-forest uppercase transition hover:-translate-y-0.5 hover:bg-forest hover:text-white hover:shadow-md"
                 >
                   Request monthly service
                   <ArrowRight className="h-4 w-4" />
-                </a>
+                </button>
               </article>
 
               <article className="relative flex flex-col rounded-3xl border-2 border-gold bg-forest p-8 text-white shadow-xl">
@@ -776,14 +764,14 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <a
-                  href="#request-modal"
+                <button
+                  type="button"
                   onClick={() => requestService("yearly")}
                   className={`mt-8 ${goldButtonClass} px-6 py-3 text-sm uppercase`}
                 >
                   Request yearly service
                   <ArrowRight className="h-4 w-4" />
-                </a>
+                </button>
               </article>
             </div>
           </div>
@@ -810,14 +798,14 @@ export default function HomePage() {
                 .
               </p>
             </div>
-            <a
-              href="#request-modal"
+            <button
+              type="button"
               onClick={() => requestService()}
               className={`${goldButtonClass} shrink-0 px-7 py-3.5 text-sm uppercase`}
             >
               Request Service
               <ArrowRight className="h-4 w-4" />
-            </a>
+            </button>
           </div>
         </section>
       </main>
@@ -875,14 +863,11 @@ export default function HomePage() {
         aria-modal="true"
         aria-labelledby="request-title"
       >
-        <a
-          href="#top"
+        <button
+          type="button"
           aria-label="Close request form"
           className="absolute inset-0"
-          onClick={(event) => {
-            event.preventDefault();
-            closeModal();
-          }}
+          onClick={closeModal}
         />
         <div className="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
             <div className="flex items-start justify-between gap-4 border-b border-forest/10 px-5 py-4 sm:px-6">
@@ -897,17 +882,14 @@ export default function HomePage() {
                   Tell us about the property
                 </h2>
               </div>
-              <a
-                href="#top"
-                onClick={(event) => {
-                  event.preventDefault();
-                  closeModal();
-                }}
+              <button
+                type="button"
+                onClick={closeModal}
                 className="rounded-full p-2 text-forest/60 transition hover:bg-cream hover:text-forest"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
-              </a>
+              </button>
             </div>
 
             {status === "success" ? (

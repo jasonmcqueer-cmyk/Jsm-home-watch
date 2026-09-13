@@ -46,12 +46,10 @@ button {
   background: rgb(9 36 22 / 0.72);
 }
 
-#request-modal:target,
 #request-modal.is-open {
   display: flex;
 }
 
-body:has(#request-modal:target),
 body:has(#request-modal.is-open) {
   overflow: hidden;
 }
