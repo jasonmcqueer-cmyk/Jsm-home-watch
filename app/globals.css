@@ -36,31 +36,6 @@ button {
   cursor: pointer;
 }
 
-#request-modal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  align-items: flex-end;
-  justify-content: center;
-  background: rgb(9 36 22 / 0.72);
-}
-
-#request-modal.is-open {
-  display: flex;
-}
-
-body:has(#request-modal.is-open) {
-  overflow: hidden;
-}
-
-@media (min-width: 640px) {
-  #request-modal {
-    align-items: center;
-    padding: 1.5rem;
-  }
-}
-
 ::selection {
   background: color-mix(in srgb, var(--gold) 70%, white);
   color: var(--forest-deep);

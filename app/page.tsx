@@ -856,20 +856,19 @@ export default function HomePage() {
         </div>
       </footer>
 
+      {modalOpen ? (
       <div
         id="request-modal"
-        className={modalOpen ? "is-open" : undefined}
+        className="fixed inset-0 z-[9999] flex items-end justify-center bg-forest-deep/70 p-0 sm:items-center sm:p-6"
         role="dialog"
         aria-modal="true"
         aria-labelledby="request-title"
+        onClick={closeModal}
       >
-        <button
-          type="button"
-          aria-label="Close request form"
-          className="absolute inset-0"
-          onClick={closeModal}
-        />
-        <div className="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
+        <div
+          className="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+          onClick={(event) => event.stopPropagation()}
+        >
             <div className="flex items-start justify-between gap-4 border-b border-forest/10 px-5 py-4 sm:px-6">
               <div>
                 <p className="text-xs font-bold tracking-[0.18em] text-lake uppercase">
@@ -1093,6 +1092,7 @@ export default function HomePage() {
             )}
           </div>
       </div>
+      ) : null}
     </div>
   );
 }
