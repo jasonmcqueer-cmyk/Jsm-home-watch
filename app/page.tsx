@@ -1141,7 +1141,7 @@ export default function HomePage() {
               <p
                 id="request-send-status"
                 hidden
-                className="mt-5 rounded-xl bg-cream px-4 py-3 text-sm text-forest"
+                className="mt-5 rounded-xl border border-gold bg-gold/25 px-4 py-3 text-sm font-semibold text-forest"
               />
 
               <button

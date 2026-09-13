@@ -109,6 +109,8 @@
     var statusNode = document.getElementById("request-send-status");
     if (statusNode) {
       statusNode.hidden = false;
+      statusNode.className =
+        "mt-5 rounded-xl border border-gold bg-gold/25 px-4 py-3 text-sm font-semibold text-forest";
       statusNode.textContent = "Sending…";
     }
 
