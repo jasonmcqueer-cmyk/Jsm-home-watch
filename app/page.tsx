@@ -286,23 +286,23 @@ export default function HomePage() {
     return nextErrors;
   }
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-
+  async function sendRequest(formEl?: HTMLFormElement | null) {
     const sending = window as Window & { __jsmSending?: boolean };
     if (sending.__jsmSending) return;
 
-    const data = new FormData(event.currentTarget);
+    const host =
+      formEl ||
+      (document.getElementById("request-service-form") as HTMLFormElement | null);
+    const data = host ? new FormData(host) : null;
     const snapshot: FormState = {
-      name: String(data.get("name") || form.name),
-      email: String(data.get("email") || form.email),
-      phone: String(data.get("phone") || form.phone),
+      name: String(data?.get("name") || form.name),
+      email: String(data?.get("email") || form.email),
+      phone: String(data?.get("phone") || form.phone),
       propertyType: (String(
-        data.get("propertyType") || form.propertyType,
+        data?.get("propertyType") || form.propertyType,
       ) || "") as FormState["propertyType"],
-      plan: (String(data.get("plan") || form.plan) || "") as FormState["plan"],
-      message: String(data.get("message") || form.message),
+      plan: (String(data?.get("plan") || form.plan) || "") as FormState["plan"],
+      message: String(data?.get("message") || form.message),
     };
 
     const nextErrors = validate(snapshot);
@@ -402,6 +402,12 @@ export default function HomePage() {
     } finally {
       sending.__jsmSending = false;
     }
+  }
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    await sendRequest(event.currentTarget);
   }
 
   function scrollToId(id: string) {
@@ -1139,7 +1145,8 @@ export default function HomePage() {
               />
 
               <button
-                type="submit"
+                type="button"
+                onClick={() => void sendRequest()}
                 className={`mt-6 w-full ${goldButtonClass} px-6 py-3.5 text-sm tracking-wide uppercase`}
               >
                 {status === "submitting" ? (
