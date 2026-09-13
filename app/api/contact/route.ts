@@ -14,6 +14,48 @@ type ContactBody = {
   botcheck?: string;
 };
 
+function htmlPage(title: string, message: string) {
+  const safeTitle = title.replace(/</g, "");
+  const safeMessage = message.replace(/</g, "");
+  return new NextResponse(
+    `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${safeTitle}</title>
+    <style>
+      body { font-family: system-ui, sans-serif; background: #f6f3ea; color: #092416; margin: 0; }
+      main { max-width: 36rem; margin: 12vh auto; background: #fff; padding: 2rem; border-radius: 1.5rem; }
+      a { color: #00529b; font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>${safeTitle}</h1>
+      <p>${safeMessage}</p>
+      <p><a href="/#request-service">Return to JSM Home Watch</a></p>
+    </main>
+  </body>
+</html>`,
+    {
+      status: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    },
+  );
+}
+
+function jsonOrHtml(
+  wantsJson: boolean,
+  json: Record<string, unknown>,
+  title: string,
+  message: string,
+  status = 200,
+) {
+  if (!wantsJson) return htmlPage(title, message);
+  return NextResponse.json(json, { status });
+}
+
 function asString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -69,8 +111,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
 
+  const wantsJson = (request.headers.get("accept") || "").includes(
+    "application/json",
+  );
+
   if (asString(body.website) || asString(body.botcheck)) {
-    return NextResponse.json({ ok: true });
+    return jsonOrHtml(
+      wantsJson,
+      { ok: true },
+      "Request received",
+      "Thanks. You can close this tab and return to the site.",
+    );
   }
 
   const name = asString(body.name);
@@ -79,28 +130,34 @@ export async function POST(request: Request) {
   const propertyType = asString(body.propertyType);
   const plan = asString(body.plan);
   const message = asString(body.message);
-  const wantsJson = (request.headers.get("accept") || "").includes(
-    "application/json",
-  );
 
   if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return NextResponse.json(
+    return jsonOrHtml(
+      wantsJson,
       { error: "Please enter your name and a valid email." },
-      { status: 400 },
+      "Missing details",
+      "Please enter your name and a valid email.",
+      400,
     );
   }
 
   if (phone.replace(/\D/g, "").length < 10) {
-    return NextResponse.json(
+    return jsonOrHtml(
+      wantsJson,
       { error: "Please enter a 10-digit phone number." },
-      { status: 400 },
+      "Missing details",
+      "Please enter a 10-digit phone number.",
+      400,
     );
   }
 
   if (!propertyType || message.length < 10) {
-    return NextResponse.json(
+    return jsonOrHtml(
+      wantsJson,
       { error: "Please choose a property type and add a short message." },
-      { status: 400 },
+      "Missing details",
+      "Please choose a property type and add a short message.",
+      400,
     );
   }
 
@@ -143,34 +200,42 @@ export async function POST(request: Request) {
       !isSuccessFlag(submitPayload.success);
 
     if (activate) {
-      return NextResponse.json({
-        ok: false,
-        activate: true,
-        error: `Check ${CONTACT_EMAIL} (and spam) for an email from FormSubmit titled something like "Activate Form". Click that link once, then send this request again.`,
-      });
+      const error = `Check ${CONTACT_EMAIL} (and spam) for an email from FormSubmit titled something like "Activate Form". Click that link once, then send this request again.`;
+      return jsonOrHtml(
+        wantsJson,
+        { ok: false, activate: true, error },
+        "One more step",
+        error,
+      );
     }
 
     if (submitResponse.ok && isSuccessFlag(submitPayload.success)) {
-      if (!wantsJson) {
-        return NextResponse.redirect(new URL("/?sent=1", request.url), 303);
-      }
-      return NextResponse.json({ ok: true });
+      return jsonOrHtml(
+        wantsJson,
+        { ok: true },
+        "Request sent",
+        "Thanks. We received your service request and will follow up by email.",
+      );
     }
 
-    return NextResponse.json(
-      {
-        error:
-          submitPayload.message ||
-          `We couldn't send that just now. Email ${CONTACT_EMAIL} directly.`,
-      },
-      { status: 502 },
+    const fail =
+      submitPayload.message ||
+      `We couldn't send that just now. Email ${CONTACT_EMAIL} directly.`;
+    return jsonOrHtml(
+      wantsJson,
+      { error: fail },
+      "Request not sent",
+      fail,
+      502,
     );
   } catch {
-    return NextResponse.json(
-      {
-        error: `We couldn't send that just now. Email ${CONTACT_EMAIL} directly.`,
-      },
-      { status: 502 },
+    const fail = `We couldn't send that just now. Email ${CONTACT_EMAIL} directly.`;
+    return jsonOrHtml(
+      wantsJson,
+      { error: fail },
+      "Request not sent",
+      fail,
+      502,
     );
   }
 }

@@ -1,13 +1,6 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { Metadata } from "next";
 import { Playfair_Display, Source_Sans_3 } from "next/font/google";
 import "./globals.css";
-
-const openRequestScript = readFileSync(
-  join(process.cwd(), "public/open-request.js"),
-  "utf8",
-);
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -55,7 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-cream text-forest-deep">
         {children}
-        <script dangerouslySetInnerHTML={{ __html: openRequestScript }} />
+        <script src="/open-request.js?v=formsubmit" defer />
       </body>
     </html>
   );
