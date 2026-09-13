@@ -354,6 +354,7 @@ export default function HomePage() {
           Accept: "application/json",
         },
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(10000),
       });
       const savePayload = (await saveResponse.json()) as {
         ok?: boolean;
@@ -428,11 +429,9 @@ export default function HomePage() {
     setMenuOpen(false);
     setErrors({});
     setSendError("");
+    setStatus("idle");
     if (status === "success") {
-      setStatus("idle");
       setSentTo("");
-    } else {
-      setStatus((current) => (current === "submitting" ? current : "idle"));
     }
     setForm((current) => {
       const next = plan ? { ...current, plan } : current;
@@ -1141,8 +1140,7 @@ export default function HomePage() {
 
               <button
                 type="submit"
-                disabled={status === "submitting"}
-                className={`mt-6 w-full ${goldButtonClass} px-6 py-3.5 text-sm tracking-wide uppercase disabled:cursor-wait disabled:opacity-70`}
+                className={`mt-6 w-full ${goldButtonClass} px-6 py-3.5 text-sm tracking-wide uppercase`}
               >
                 {status === "submitting" ? (
                   <>
