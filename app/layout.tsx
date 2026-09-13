@@ -1,7 +1,13 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { Metadata } from "next";
 import { Playfair_Display, Source_Sans_3 } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
+
+const openRequestScript = readFileSync(
+  join(process.cwd(), "public/open-request.js"),
+  "utf8",
+);
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
@@ -48,8 +54,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${playfair.variable} ${sourceSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-cream text-forest-deep">
-        <Script src="/open-request.js" strategy="beforeInteractive" />
         {children}
+        <script dangerouslySetInnerHTML={{ __html: openRequestScript }} />
       </body>
     </html>
   );
