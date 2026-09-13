@@ -293,7 +293,19 @@ export default function HomePage() {
     const sending = window as Window & { __jsmSending?: boolean };
     if (sending.__jsmSending) return;
 
-    const nextErrors = validate(form);
+    const data = new FormData(event.currentTarget);
+    const snapshot: FormState = {
+      name: String(data.get("name") || form.name),
+      email: String(data.get("email") || form.email),
+      phone: String(data.get("phone") || form.phone),
+      propertyType: (String(
+        data.get("propertyType") || form.propertyType,
+      ) || "") as FormState["propertyType"],
+      plan: (String(data.get("plan") || form.plan) || "") as FormState["plan"],
+      message: String(data.get("message") || form.message),
+    };
+
+    const nextErrors = validate(snapshot);
     setErrors(nextErrors);
     setSendError("");
     if (Object.keys(nextErrors).length > 0) {
@@ -303,8 +315,6 @@ export default function HomePage() {
 
     sending.__jsmSending = true;
     setStatus("submitting");
-
-    const snapshot = { ...form };
     const payload = {
       name: snapshot.name.trim(),
       email: snapshot.email.trim(),
@@ -971,8 +981,6 @@ export default function HomePage() {
             ) : (
             <form
               id="request-service-form"
-              action="/api/contact"
-              method="POST"
               data-react="ready"
               onSubmit={onSubmit}
               className="overflow-y-auto px-5 py-5 sm:px-6"
