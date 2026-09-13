@@ -90,4 +90,65 @@
   if (location.hash === "#request-service") {
     openDialog("");
   }
+
+  document.addEventListener(
+    "submit",
+    function (event) {
+      var form = event.target;
+      if (!form || form.id !== "request-service-form") return;
+      event.preventDefault();
+      if (form.getAttribute("data-react") === "ready") return;
+      event.stopPropagation();
+      sendWithoutReact(form);
+    },
+    true,
+  );
+
+  function sendWithoutReact(form) {
+    if (form.getAttribute("data-sending") === "1") return;
+    form.setAttribute("data-sending", "1");
+
+    var statusNode = document.getElementById("request-send-status");
+    if (statusNode) {
+      statusNode.hidden = false;
+      statusNode.textContent = "Sending…";
+    }
+
+    var data = new FormData(form);
+    var payload = {};
+    data.forEach(function (value, key) {
+      payload[key] = value;
+    });
+
+    fetch("/api/contact", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+      .then(function (response) {
+        return response.json().then(function (body) {
+          return { ok: response.ok, body: body };
+        });
+      })
+      .then(function (result) {
+        if (statusNode) {
+          statusNode.textContent = result.body && result.body.ok
+            ? "Request sent. We’ll follow up by email."
+            : (result.body && result.body.error) ||
+              "We couldn’t send that just now.";
+        }
+      })
+      .catch(function () {
+        if (statusNode) {
+          statusNode.textContent =
+            "We couldn’t send that just now. Email jsmhomewatch@yahoo.com directly.";
+        }
+      })
+      .then(function () {
+        form.removeAttribute("data-sending");
+      });
+  }
 })();

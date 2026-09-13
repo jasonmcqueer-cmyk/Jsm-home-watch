@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useLayoutEffect, useState, type ReactNode } from "react";
+import { FormEvent, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
 import {
   ArrowRight,
   Award,
@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 
 const CONTACT_EMAIL = "jsmhomewatch@yahoo.com";
-const WEB3FORMS_ACCESS_KEY = "22572d68-6c3f-4a33-bdfb-0d4ba6171539";
 
 const trustBadges = [
   {
@@ -290,6 +289,7 @@ export default function HomePage() {
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     event.stopPropagation();
+    if (event.currentTarget.getAttribute("data-sending") === "1") return;
 
     const nextErrors = validate(form);
     setErrors(nextErrors);
@@ -303,58 +303,19 @@ export default function HomePage() {
     setStatus("submitting");
 
     const snapshot = { ...form };
-    const propertyLabel =
-      snapshot.propertyType === "primary"
-        ? "Primary Home"
-        : snapshot.propertyType === "vacation"
-          ? "Vacation Home"
-          : snapshot.propertyType === "airbnb"
-            ? "Airbnb"
-            : snapshot.propertyType;
-    const selectedPlan =
-      snapshot.plan === "monthly"
-        ? "Monthly Watch"
-        : snapshot.plan === "yearly"
-          ? "Yearly Watch"
-          : "Not specified";
-    const subject =
-      snapshot.plan === "monthly"
-        ? "Monthly Home Watch Request"
-        : snapshot.plan === "yearly"
-          ? "Yearly Home Watch Request"
-          : "Home Watch Service Request";
 
     const payload = {
-      access_key: WEB3FORMS_ACCESS_KEY,
-      subject,
-      from_name: snapshot.name.trim(),
       name: snapshot.name.trim(),
       email: snapshot.email.trim(),
       phone: snapshot.phone.trim(),
-      propertyType: propertyLabel,
-      plan: selectedPlan,
+      propertyType: snapshot.propertyType,
+      plan: snapshot.plan,
       message: snapshot.message.trim(),
-      botcheck: honeypot,
+      website: honeypot,
     };
 
     try {
       const apiResponse = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...snapshot, website: honeypot }),
-      });
-      const apiPayload = (await apiResponse.json()) as { error?: string };
-
-      if (!apiResponse.ok) {
-        setStatus("error");
-        setSendError(
-          apiPayload.error ||
-            `We couldn't send that just now. Email ${CONTACT_EMAIL} directly.`,
-        );
-        return;
-      }
-
-      const submitResponse = await fetch("https://api.web3forms.com/submit", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -362,18 +323,13 @@ export default function HomePage() {
         },
         body: JSON.stringify(payload),
       });
+      const apiPayload = (await apiResponse.json()) as {
+        error?: string;
+        ok?: boolean;
+        activate?: boolean;
+      };
 
-      let submitPayload: { success?: boolean; message?: string } = {};
-      try {
-        submitPayload = (await submitResponse.json()) as {
-          success?: boolean;
-          message?: string;
-        };
-      } catch {
-        submitPayload = {};
-      }
-
-      if (submitResponse.ok && submitPayload.success === true) {
+      if (apiPayload.ok) {
         setSentTo(snapshot.email);
         setForm(emptyForm);
         setHoneypot("");
@@ -384,8 +340,8 @@ export default function HomePage() {
 
       setStatus("error");
       setSendError(
-        submitPayload.message ||
-          `We couldn't send that just now. Email ${CONTACT_EMAIL} directly and we'll follow up.`,
+        apiPayload.error ||
+          `We couldn't send that just now. Email ${CONTACT_EMAIL} directly.`,
       );
     } catch {
       setStatus("error");
@@ -466,6 +422,12 @@ export default function HomePage() {
     });
 
     return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    const form = document.getElementById("request-service-form");
+    form?.setAttribute("data-react", "ready");
+    return () => form?.removeAttribute("data-react");
   }, []);
 
   return (
@@ -939,22 +901,13 @@ export default function HomePage() {
               </div>
             ) : (
             <form
-              action="https://api.web3forms.com/submit"
+              id="request-service-form"
+              action="/api/contact"
               method="POST"
               onSubmit={onSubmit}
               className="overflow-y-auto px-5 py-5 sm:px-6"
               noValidate
             >
-              <input
-                type="hidden"
-                name="access_key"
-                value={WEB3FORMS_ACCESS_KEY}
-              />
-              <input
-                type="hidden"
-                name="subject"
-                value="Home Watch Service Request"
-              />
               {form.plan ? (
                 <p className="mb-5 rounded-xl border border-gold/40 bg-gold/15 px-4 py-3 text-sm font-semibold text-forest">
                   You&apos;re requesting {planLabel}. Complete the form and
@@ -1101,6 +1054,12 @@ export default function HomePage() {
                   Please complete the highlighted fields so we can follow up.
                 </p>
               ) : null}
+
+              <p
+                id="request-send-status"
+                hidden
+                className="mt-5 rounded-xl bg-cream px-4 py-3 text-sm text-forest"
+              />
 
               <button
                 type="submit"
