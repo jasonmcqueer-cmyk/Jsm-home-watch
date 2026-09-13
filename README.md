@@ -38,4 +38,4 @@ npm start
 
 Deploy on Vercel with the default Next.js settings. No environment variables are required.
 
-The contact form posts to `/api/contact`, which delivers to `jsmhomewatch@yahoo.com`. The first send may require clicking an **Activate Form** link in that inbox (check spam). After that, new requests arrive as emails.
+The contact form saves each request on the server and also tries to email `jsmhomewatch@yahoo.com`. If the inbox has not been activated yet, the request is still stored and shown as received.

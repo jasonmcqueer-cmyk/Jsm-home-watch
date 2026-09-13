@@ -212,6 +212,7 @@
       var form = event.target;
       if (!form || form.id !== "request-service-form") return;
       event.preventDefault();
+      if (form.getAttribute("data-react") === "ready") return;
       event.stopImmediatePropagation();
       sendForm(form);
     },

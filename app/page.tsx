@@ -268,9 +268,129 @@ export default function HomePage() {
     });
   }
 
+  function validate(next: FormState) {
+    const nextErrors: Partial<Record<keyof FormState, string>> = {};
+    if (!next.name.trim()) nextErrors.name = "Please enter your name.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next.email.trim())) {
+      nextErrors.email = "Enter a valid email address.";
+    }
+    if (next.phone.replace(/\D/g, "").length < 10) {
+      nextErrors.phone = "Enter a 10-digit phone number.";
+    }
+    if (!next.propertyType) {
+      nextErrors.propertyType = "Select a property type.";
+    }
+    if (next.message.trim().length < 10) {
+      nextErrors.message = "Tell us a bit about the property or what you need.";
+    }
+    return nextErrors;
+  }
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     event.stopPropagation();
+
+    const sending = window as Window & { __jsmSending?: boolean };
+    if (sending.__jsmSending) return;
+
+    const nextErrors = validate(form);
+    setErrors(nextErrors);
+    setSendError("");
+    if (Object.keys(nextErrors).length > 0) {
+      setStatus("error");
+      return;
+    }
+
+    sending.__jsmSending = true;
+    setStatus("submitting");
+
+    const snapshot = { ...form };
+    const payload = {
+      name: snapshot.name.trim(),
+      email: snapshot.email.trim(),
+      phone: snapshot.phone.trim(),
+      propertyType: snapshot.propertyType,
+      plan: snapshot.plan,
+      message: snapshot.message.trim(),
+      website: honeypot,
+    };
+
+    const propertyLabel =
+      snapshot.propertyType === "primary"
+        ? "Primary Home"
+        : snapshot.propertyType === "vacation"
+          ? "Vacation Home"
+          : snapshot.propertyType === "airbnb"
+            ? "Airbnb"
+            : snapshot.propertyType;
+    const selectedPlan =
+      snapshot.plan === "monthly"
+        ? "Monthly Watch"
+        : snapshot.plan === "yearly"
+          ? "Yearly Watch"
+          : "Not specified";
+    const subject =
+      snapshot.plan === "monthly"
+        ? "Monthly Home Watch Request"
+        : snapshot.plan === "yearly"
+          ? "Yearly Home Watch Request"
+          : "Home Watch Service Request";
+
+    try {
+      const saveResponse = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      const savePayload = (await saveResponse.json()) as {
+        ok?: boolean;
+        error?: string;
+      };
+
+      if (!saveResponse.ok || !savePayload.ok) {
+        setStatus("error");
+        setSendError(
+          savePayload.error ||
+            `We couldn't send that just now. Email ${CONTACT_EMAIL} directly.`,
+        );
+        return;
+      }
+
+      void fetch(`https://formsubmit.co/ajax/${CONTACT_EMAIL}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          name: payload.name,
+          email: payload.email,
+          phone: payload.phone,
+          "Property Type": propertyLabel,
+          "Service Plan": selectedPlan,
+          message: payload.message,
+          _subject: subject,
+          _template: "table",
+          _captcha: "false",
+        }),
+      }).catch(() => undefined);
+
+      setSentTo(snapshot.email);
+      setForm(emptyForm);
+      setHoneypot("");
+      sessionStorage.removeItem("jsm-request-draft");
+      setStatus("success");
+    } catch {
+      setStatus("error");
+      setSendError(
+        `We couldn't send that just now. Email ${CONTACT_EMAIL} directly.`,
+      );
+    } finally {
+      sending.__jsmSending = false;
+    }
   }
 
   function scrollToId(id: string) {
@@ -822,10 +942,10 @@ export default function HomePage() {
                   <Check className="h-6 w-6" />
                 </span>
                 <h3 className="mt-4 font-display text-2xl font-bold text-forest">
-                  Request sent
+                  Request received
                 </h3>
                 <p className="mt-3 text-sm text-forest/75">
-                  Thanks. We received your request
+                  Thanks. We have your request
                   {sentTo ? ` and will follow up at ${sentTo}` : ""}. If you
                   don&apos;t hear back, email{" "}
                   <a
@@ -853,6 +973,7 @@ export default function HomePage() {
               id="request-service-form"
               action="/api/contact"
               method="POST"
+              data-react="ready"
               onSubmit={onSubmit}
               className="overflow-y-auto px-5 py-5 sm:px-6"
               noValidate
