@@ -1146,6 +1146,7 @@ export default function HomePage() {
 
               <button
                 type="button"
+                data-send-request="true"
                 onClick={() => void sendRequest()}
                 className={`mt-6 w-full ${goldButtonClass} px-6 py-3.5 text-sm tracking-wide uppercase`}
               >

@@ -113,59 +113,41 @@
     }
 
     var plan = fieldValue(form, "plan");
-    var subject =
-      plan === "monthly"
-        ? "Monthly Home Watch Request"
-        : plan === "yearly"
-          ? "Yearly Home Watch Request"
-          : "Home Watch Service Request";
+    var payload = {
+      name: parsed.name,
+      email: parsed.email,
+      phone: parsed.phone,
+      propertyType: parsed.propertyType,
+      plan: plan,
+      message: parsed.message,
+    };
 
-    fetch("https://formsubmit.co/ajax/" + CONTACT_EMAIL, {
+    fetch("/api/contact", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({
-        name: parsed.name,
-        email: parsed.email,
-        phone: parsed.phone,
-        "Property Type": parsed.propertyType,
-        "Service Plan": plan || "Not specified",
-        message: parsed.message,
-        _subject: subject,
-        _template: "table",
-        _captcha: "false",
-      }),
+      body: JSON.stringify(payload),
     })
       .then(function (response) {
         return response.json().then(function (body) {
-          return { status: response.status, body: body || {} };
+          return { ok: response.ok && body && body.ok, body: body || {} };
         });
       })
       .then(function (result) {
-        var success =
-          result.body.success === true || result.body.success === "true";
-        var message = result.body.message || "";
-        var activate = /activat/i.test(message) && !success;
-        if (success) {
+        if (result.ok) {
           if (statusNode) {
-            statusNode.textContent = "Request sent. We’ll follow up by email.";
+            statusNode.textContent = "Request received. We’ll follow up by email.";
           }
           notify("jsm-request-result", { ok: true, email: parsed.email });
-          form.reset();
           return;
         }
-        var error = activate
-          ? "Check " +
-            CONTACT_EMAIL +
-            " (and spam) for an email from FormSubmit. Click Activate Form once, then send this request again."
-          : message ||
-            "We couldn’t send that just now. Email " +
-              CONTACT_EMAIL +
-              " directly.";
+        var error =
+          (result.body && result.body.error) ||
+          "We couldn’t send that just now. Email " + CONTACT_EMAIL + " directly.";
         if (statusNode) statusNode.textContent = error;
-        notify("jsm-request-result", { ok: false, activate: activate, error: error });
+        notify("jsm-request-result", { ok: false, error: error });
       })
       .catch(function () {
         var error =
@@ -188,6 +170,15 @@
       if (opener) {
         event.preventDefault();
         openDialog(opener.getAttribute("data-plan") || "");
+        return;
+      }
+
+      var sender = target.closest("[data-send-request]");
+      if (sender) {
+        event.preventDefault();
+        event.stopPropagation();
+        var form = document.getElementById("request-service-form");
+        if (form) sendForm(form);
         return;
       }
 
