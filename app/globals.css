@@ -46,3 +46,41 @@ select,
 textarea {
   font: inherit;
 }
+
+#request-service {
+  width: min(32rem, calc(100vw - 1.5rem));
+  max-height: 92vh;
+  padding: 0;
+  border: none;
+  border-radius: 1.5rem;
+  background: #fff;
+  color: inherit;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.35);
+}
+
+#request-service::backdrop {
+  background: rgb(9 36 22 / 0.72);
+}
+
+#request-service:not([open]) {
+  display: none;
+  pointer-events: none;
+}
+
+#request-service:not([open]):target {
+  display: block;
+  pointer-events: auto;
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  z-index: 9999;
+}
+
+@media (max-width: 640px) {
+  #request-service {
+    width: 100%;
+    max-height: 94vh;
+    margin: auto 0 0;
+    border-radius: 1.5rem 1.5rem 0 0;
+  }
+}

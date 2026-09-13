@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useLayoutEffect, useState } from "react";
+import { FormEvent, useLayoutEffect, useState, type ReactNode } from "react";
 import {
   ArrowRight,
   Award,
@@ -214,6 +214,33 @@ function MichiganMark({ className = "" }: { className?: string }) {
   );
 }
 
+function RequestCta({
+  className,
+  children,
+  plan = "",
+  onOpen,
+}: {
+  className: string;
+  children: ReactNode;
+  plan?: PlanType;
+  onOpen: (plan?: PlanType) => void;
+}) {
+  return (
+    <a
+      href="#request-service"
+      data-open-request="true"
+      {...(plan ? { "data-plan": plan } : {})}
+      className={className}
+      onClick={(event) => {
+        event.preventDefault();
+        onOpen(plan);
+      }}
+    >
+      {children}
+    </a>
+  );
+}
+
 export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -226,7 +253,6 @@ export default function HomePage() {
   const [sendError, setSendError] = useState("");
   const [honeypot, setHoneypot] = useState("");
   const [sentTo, setSentTo] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
 
   const planLabel =
     form.plan === "monthly"
@@ -374,8 +400,15 @@ export default function HomePage() {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   }
 
+  function getDialog() {
+    return document.getElementById(
+      "request-service",
+    ) as HTMLDialogElement | null;
+  }
+
   function closeModal() {
-    setModalOpen(false);
+    const dialog = getDialog();
+    if (dialog?.open) dialog.close();
     setSendError("");
     if (status === "success") {
       setStatus("idle");
@@ -398,7 +431,12 @@ export default function HomePage() {
       writeDraft(next);
       return next;
     });
-    setModalOpen(true);
+    const dialog = getDialog();
+    try {
+      if (dialog && !dialog.open) dialog.showModal();
+    } catch {
+      dialog?.setAttribute("open", "");
+    }
   }
 
   useLayoutEffect(() => {
@@ -429,31 +467,6 @@ export default function HomePage() {
 
     return () => window.cancelAnimationFrame(frame);
   }, []);
-
-  useEffect(() => {
-    if (!modalOpen) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeModal();
-    };
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", onKeyDown);
-
-    const focusTimer = window.setTimeout(() => {
-      const active = document.activeElement;
-      const modal = document.getElementById("request-modal");
-      if (modal?.contains(active)) return;
-      document.getElementById("contact-name")?.focus();
-    }, 40);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", onKeyDown);
-      window.clearTimeout(focusTimer);
-    };
-  }, [modalOpen]);
 
   return (
     <div className="flex min-h-full flex-col">
@@ -488,14 +501,13 @@ export default function HomePage() {
             <a href="#contact" className="transition hover:text-gold">
               Contact
             </a>
-            <button
-              type="button"
-              onClick={() => requestService()}
+            <RequestCta
+              onOpen={requestService}
               className={goldButtonClass}
             >
               Request Service
               <ArrowRight className="h-4 w-4" />
-            </button>
+            </RequestCta>
           </nav>
 
           <button
@@ -532,13 +544,12 @@ export default function HomePage() {
               >
                 Contact
               </a>
-              <button
-                type="button"
-                onClick={() => requestService()}
+              <RequestCta
+                onOpen={requestService}
                 className={`mt-1 ${goldButtonClass} py-3`}
               >
                 Request Service
-              </button>
+              </RequestCta>
             </div>
           </div>
         ) : null}
@@ -564,21 +575,19 @@ export default function HomePage() {
                 cottages, and year-round homes across Northern Michigan.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => requestService()}
+                <RequestCta
+                  onOpen={requestService}
                   className={`${goldButtonClass} pointer-events-auto px-7 py-3.5 text-sm tracking-wide uppercase`}
                 >
                   Request Service
                   <ArrowRight className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => requestService()}
+                </RequestCta>
+                <RequestCta
+                  onOpen={requestService}
                   className="pointer-events-auto inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/80 px-7 py-3.5 text-sm font-bold tracking-wide text-white uppercase transition hover:-translate-y-0.5 hover:bg-white hover:text-forest-deep"
                 >
                   Get in Touch
-                </button>
+                </RequestCta>
               </div>
             </div>
           </div>
@@ -729,14 +738,14 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <button
-                  type="button"
-                  onClick={() => requestService("monthly")}
+                <RequestCta
+                  plan="monthly"
+                  onOpen={requestService}
                   className="mt-8 inline-flex items-center justify-center gap-2 rounded-full border-2 border-forest px-6 py-3 text-sm font-bold text-forest uppercase transition hover:-translate-y-0.5 hover:bg-forest hover:text-white hover:shadow-md"
                 >
                   Request monthly service
                   <ArrowRight className="h-4 w-4" />
-                </button>
+                </RequestCta>
               </article>
 
               <article className="relative flex flex-col rounded-3xl border-2 border-gold bg-forest p-8 text-white shadow-xl">
@@ -764,14 +773,14 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <button
-                  type="button"
-                  onClick={() => requestService("yearly")}
+                <RequestCta
+                  plan="yearly"
+                  onOpen={requestService}
                   className={`mt-8 ${goldButtonClass} px-6 py-3 text-sm uppercase`}
                 >
                   Request yearly service
                   <ArrowRight className="h-4 w-4" />
-                </button>
+                </RequestCta>
               </article>
             </div>
           </div>
@@ -798,14 +807,13 @@ export default function HomePage() {
                 .
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => requestService()}
+            <RequestCta
+              onOpen={requestService}
               className={`${goldButtonClass} shrink-0 px-7 py-3.5 text-sm uppercase`}
             >
               Request Service
               <ArrowRight className="h-4 w-4" />
-            </button>
+            </RequestCta>
           </div>
         </section>
       </main>
@@ -856,19 +864,21 @@ export default function HomePage() {
         </div>
       </footer>
 
-      {modalOpen ? (
-      <div
-        id="request-modal"
-        className="fixed inset-0 z-[9999] flex items-end justify-center bg-forest-deep/70 p-0 sm:items-center sm:p-6"
-        role="dialog"
-        aria-modal="true"
+      <dialog
+        id="request-service"
         aria-labelledby="request-title"
-        onClick={closeModal}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) closeModal();
+        }}
+        onClose={() => {
+          setSendError("");
+          if (status === "success") {
+            setStatus("idle");
+            setSentTo("");
+          }
+        }}
       >
-        <div
-          className="relative z-10 flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
-          onClick={(event) => event.stopPropagation()}
-        >
+        <div className="flex max-h-[92vh] w-full flex-col overflow-hidden">
             <div className="flex items-start justify-between gap-4 border-b border-forest/10 px-5 py-4 sm:px-6">
               <div>
                 <p className="text-xs font-bold tracking-[0.18em] text-lake uppercase">
@@ -881,14 +891,18 @@ export default function HomePage() {
                   Tell us about the property
                 </h2>
               </div>
-              <button
-                type="button"
-                onClick={closeModal}
+              <a
+                href="#top"
+                data-close-request="true"
+                onClick={(event) => {
+                  event.preventDefault();
+                  closeModal();
+                }}
                 className="rounded-full p-2 text-forest/60 transition hover:bg-cream hover:text-forest"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
-              </button>
+              </a>
             </div>
 
             {status === "success" ? (
@@ -911,20 +925,36 @@ export default function HomePage() {
                   </a>
                   .
                 </p>
-                <button
-                  type="button"
-                  onClick={closeModal}
+                <a
+                  href="#top"
+                  data-close-request="true"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    closeModal();
+                  }}
                   className={`mt-6 ${goldButtonClass} px-7 py-3 text-sm uppercase`}
                 >
                   Done
-                </button>
+                </a>
               </div>
             ) : (
             <form
+              action="https://api.web3forms.com/submit"
+              method="POST"
               onSubmit={onSubmit}
               className="overflow-y-auto px-5 py-5 sm:px-6"
               noValidate
             >
+              <input
+                type="hidden"
+                name="access_key"
+                value={WEB3FORMS_ACCESS_KEY}
+              />
+              <input
+                type="hidden"
+                name="subject"
+                value="Home Watch Service Request"
+              />
               {form.plan ? (
                 <p className="mb-5 rounded-xl border border-gold/40 bg-gold/15 px-4 py-3 text-sm font-semibold text-forest">
                   You&apos;re requesting {planLabel}. Complete the form and
@@ -936,6 +966,7 @@ export default function HomePage() {
                 <label>
                   Website
                   <input
+                    name="botcheck"
                     tabIndex={-1}
                     autoComplete="off"
                     value={honeypot}
@@ -1090,9 +1121,8 @@ export default function HomePage() {
               </button>
             </form>
             )}
-          </div>
-      </div>
-      ) : null}
+        </div>
+      </dialog>
     </div>
   );
 }
