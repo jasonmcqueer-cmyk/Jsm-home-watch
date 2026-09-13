@@ -157,6 +157,19 @@ type FormState = {
   message: string;
 };
 
+type RequestSentDetail = {
+  ok?: boolean;
+  email?: string;
+  error?: string;
+  errors?: Partial<Record<keyof FormState, string>>;
+};
+
+declare global {
+  interface Window {
+    jsmOnRequestSent?: (detail: RequestSentDetail) => void;
+  }
+}
+
 const emptyForm: FormState = {
   name: "",
   email: "",
@@ -482,17 +495,7 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    const onStart = () => {
-      setStatus("submitting");
-      setSendError("");
-    };
-    const onResult = (event: Event) => {
-      const detail = (event as CustomEvent<{
-        ok?: boolean;
-        email?: string;
-        error?: string;
-        errors?: Partial<Record<keyof FormState, string>>;
-      }>).detail;
+    window.jsmOnRequestSent = (detail) => {
       if (detail.errors) setErrors(detail.errors);
       else setErrors({});
       if (detail.ok) {
@@ -503,14 +506,18 @@ export default function HomePage() {
         setStatus("success");
         return;
       }
+      if (detail.errors) {
+        setStatus("error");
+        setSendError(
+          detail.error || "Please complete the highlighted fields so we can follow up.",
+        );
+        return;
+      }
       setStatus("error");
       setSendError(detail.error || "");
     };
-    document.addEventListener("jsm-request-start", onStart);
-    document.addEventListener("jsm-request-result", onResult);
     return () => {
-      document.removeEventListener("jsm-request-start", onStart);
-      document.removeEventListener("jsm-request-result", onResult);
+      delete window.jsmOnRequestSent;
     };
   }, []);
 

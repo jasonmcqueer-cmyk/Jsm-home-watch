@@ -64,6 +64,9 @@
 
   function notify(name, detail) {
     document.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
+    if (typeof window.jsmOnRequestSent === "function" && name === "jsm-request-result") {
+      window.jsmOnRequestSent(detail || {});
+    }
   }
 
   function fieldValue(form, name) {
@@ -143,6 +146,24 @@
             statusNode.textContent = "Request received. We’ll follow up by email.";
           }
           notify("jsm-request-result", { ok: true, email: parsed.email });
+          fetch("https://formsubmit.co/ajax/" + CONTACT_EMAIL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+            },
+            body: JSON.stringify({
+              name: parsed.name,
+              email: parsed.email,
+              phone: parsed.phone,
+              "Property Type": parsed.propertyType,
+              "Service Plan": plan || "Not specified",
+              message: parsed.message,
+              _subject: "Home Watch Service Request",
+              _template: "table",
+              _captcha: "false",
+            }),
+          }).catch(function () {});
           return;
         }
         var error =
