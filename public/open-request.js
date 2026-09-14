@@ -202,11 +202,9 @@
           }
           var formEl = document.getElementById("request-service-form");
           var panel = document.getElementById("request-success-panel");
-          if (formEl) {
-            formEl.reset();
-            formEl.hidden = true;
-          }
+          if (formEl) formEl.hidden = true;
           if (panel) panel.hidden = false;
+          if (formEl) formEl.reset();
           clearDraft();
           notify("jsm-request-result", { ok: true, email: parsed.email });
           fetch("https://formsubmit.co/ajax/" + CONTACT_EMAIL, {

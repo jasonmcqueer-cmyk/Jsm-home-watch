@@ -435,7 +435,6 @@ export default function HomePage() {
       setHoneypot("");
       setPlanHint("");
       sessionStorage.removeItem(FORM_DRAFT_KEY);
-      setFormKey((current) => current + 1);
       setStatus("success");
     } catch {
       setStatus("error");
@@ -471,6 +470,7 @@ export default function HomePage() {
     if (status === "success") {
       setStatus("idle");
       setSentTo("");
+      setFormKey((current) => current + 1);
     }
   }
 
@@ -481,6 +481,7 @@ export default function HomePage() {
     setStatus("idle");
     if (status === "success") {
       setSentTo("");
+      setFormKey((current) => current + 1);
     }
     if (plan) setPlanHint(plan);
     const dialog = getDialog();
@@ -514,7 +515,6 @@ export default function HomePage() {
         setHoneypot("");
         setPlanHint("");
         sessionStorage.removeItem(FORM_DRAFT_KEY);
-        setFormKey((current) => current + 1);
         setStatus("success");
         return;
       }
@@ -940,6 +940,7 @@ export default function HomePage() {
           if (status === "success") {
             setStatus("idle");
             setSentTo("");
+            setFormKey((current) => current + 1);
           }
         }}
       >
@@ -1014,14 +1015,17 @@ export default function HomePage() {
               className="overflow-y-auto px-5 py-5 sm:px-6"
               noValidate
             >
-              {planHint ? (
-                <p className="mb-5 rounded-xl border border-gold/40 bg-gold/15 px-4 py-3 text-sm font-semibold text-forest">
-                  You&apos;re requesting {planLabel}. Complete the form and
-                  we&apos;ll follow up with scheduling.
-                </p>
-              ) : (
-                <p className="mb-5 hidden" aria-hidden="true" />
-              )}
+              <p
+                className={
+                  planHint
+                    ? "mb-5 rounded-xl border border-gold/40 bg-gold/15 px-4 py-3 text-sm font-semibold text-forest"
+                    : "mb-5 hidden"
+                }
+                hidden={!planHint}
+              >
+                You&apos;re requesting {planLabel}. Complete the form and
+                we&apos;ll follow up with scheduling.
+              </p>
 
               <div className="absolute -left-[9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
                 <label>
@@ -1043,7 +1047,6 @@ export default function HomePage() {
                     id="contact-name"
                     name="name"
                     autoComplete="name"
-                    defaultValue=""
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                     placeholder="Your full name"
                   />
@@ -1058,7 +1061,6 @@ export default function HomePage() {
                     name="email"
                     type="email"
                     autoComplete="email"
-                    defaultValue=""
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                     placeholder="you@email.com"
                   />
@@ -1075,7 +1077,6 @@ export default function HomePage() {
                     name="phone"
                     type="tel"
                     autoComplete="tel"
-                    defaultValue=""
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                     placeholder="(231) 555-0148"
                   />
@@ -1090,7 +1091,6 @@ export default function HomePage() {
                   </span>
                   <select
                     name="propertyType"
-                    defaultValue=""
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                   >
                     <option value="">Select one</option>
@@ -1111,7 +1111,6 @@ export default function HomePage() {
                   </span>
                   <select
                     name="plan"
-                    defaultValue=""
                     onChange={(event) =>
                       setPlanHint(event.target.value as PlanType)
                     }
@@ -1130,7 +1129,6 @@ export default function HomePage() {
                   <textarea
                     name="message"
                     rows={4}
-                    defaultValue=""
                     className="resize-y rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                     placeholder="Tell us about the property, travel schedule, and anything we should know."
                   />

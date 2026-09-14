@@ -48,7 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-cream text-forest-deep">
         {children}
-        <script src="/open-request.js?v=keep-fields" defer />
+        <script src="/open-request.js?v=keep-fields-2" defer />
       </body>
     </html>
   );
