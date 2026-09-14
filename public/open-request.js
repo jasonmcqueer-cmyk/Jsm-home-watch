@@ -1,21 +1,76 @@
 (function () {
   var CONTACT_EMAIL = "jsmhomewatch@yahoo.com";
+  var DRAFT_KEY = "jsm-request-draft";
+  var FIELD_NAMES = ["name", "email", "phone", "propertyType", "plan", "message"];
   var sending = false;
 
   function dialogEl() {
     return document.getElementById("request-service");
   }
 
+  function persistDraft(form) {
+    if (!form) return;
+    try {
+      var next = {};
+      var hasAny = false;
+      for (var i = 0; i < FIELD_NAMES.length; i++) {
+        var value = fieldValue(form, FIELD_NAMES[i]);
+        next[FIELD_NAMES[i]] = value;
+        if (value) hasAny = true;
+      }
+      if (!hasAny) return;
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(next));
+    } catch (error) {
+      /* ignore private-mode storage errors */
+    }
+  }
+
+  function restoreDraft(form) {
+    if (!form) return;
+    try {
+      var raw = sessionStorage.getItem(DRAFT_KEY);
+      if (!raw) return;
+      var draft = JSON.parse(raw);
+      if (!draft || typeof draft !== "object") return;
+      for (var i = 0; i < FIELD_NAMES.length; i++) {
+        var key = FIELD_NAMES[i];
+        var value = draft[key];
+        if (value == null || String(value).trim() === "") continue;
+        var field = form.querySelector('[name="' + key + '"]');
+        if (field && "value" in field && !String(field.value || "").trim()) {
+          field.value = String(value);
+        }
+      }
+    } catch (error) {
+      /* ignore */
+    }
+  }
+
+  function clearDraft() {
+    try {
+      sessionStorage.removeItem(DRAFT_KEY);
+    } catch (error) {
+      /* ignore */
+    }
+  }
+
   function openDialog(plan) {
     var dialog = dialogEl();
     if (!dialog) return false;
+
+    var formEl = document.getElementById("request-service-form");
+    var panel = document.getElementById("request-success-panel");
+    if (formEl) {
+      formEl.hidden = false;
+      restoreDraft(formEl);
+    }
+    if (panel) panel.hidden = true;
 
     if (plan) {
       var select = dialog.querySelector('select[name="plan"]');
       if (select) {
         select.value = plan;
-        select.dispatchEvent(new Event("input", { bubbles: true }));
-        select.dispatchEvent(new Event("change", { bubbles: true }));
+        persistDraft(formEl);
       }
     }
 
@@ -147,8 +202,12 @@
           }
           var formEl = document.getElementById("request-service-form");
           var panel = document.getElementById("request-success-panel");
-          if (formEl) formEl.hidden = true;
+          if (formEl) {
+            formEl.reset();
+            formEl.hidden = true;
+          }
           if (panel) panel.hidden = false;
+          clearDraft();
           notify("jsm-request-result", { ok: true, email: parsed.email });
           fetch("https://formsubmit.co/ajax/" + CONTACT_EMAIL, {
             method: "POST",
@@ -223,6 +282,28 @@
     if (!dialog || !dialog.open) return;
     if (event.target === dialog) closeDialog();
   });
+
+  document.addEventListener(
+    "input",
+    function (event) {
+      var target = event.target;
+      if (!target || typeof target.closest !== "function") return;
+      var form = target.closest("#request-service-form");
+      if (form) persistDraft(form);
+    },
+    true,
+  );
+
+  document.addEventListener(
+    "change",
+    function (event) {
+      var target = event.target;
+      if (!target || typeof target.closest !== "function") return;
+      var form = target.closest("#request-service-form");
+      if (form) persistDraft(form);
+    },
+    true,
+  );
 
   document.addEventListener(
     "submit",

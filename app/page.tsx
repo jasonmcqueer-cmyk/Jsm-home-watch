@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
+import { FormEvent, useEffect, useState, type ReactNode } from "react";
 import {
   ArrowRight,
   Award,
@@ -253,9 +253,56 @@ function RequestCta({
   );
 }
 
+function snapshotForm(formEl: HTMLFormElement | null): FormState {
+  const data = formEl ? new FormData(formEl) : null;
+  return {
+    name: String(data?.get("name") || ""),
+    email: String(data?.get("email") || ""),
+    phone: String(data?.get("phone") || ""),
+    propertyType: (String(data?.get("propertyType") || "") ||
+      "") as FormState["propertyType"],
+    plan: (String(data?.get("plan") || "") || "") as FormState["plan"],
+    message: String(data?.get("message") || ""),
+  };
+}
+
+function persistLiveDraft(formEl: HTMLFormElement | null) {
+  const next = snapshotForm(formEl);
+  if (
+    !next.name &&
+    !next.email &&
+    !next.phone &&
+    !next.message &&
+    !next.propertyType &&
+    !next.plan
+  ) {
+    return;
+  }
+  writeDraft(next);
+}
+
+function fillEmptyFieldsFromDraft(formEl: HTMLFormElement | null) {
+  if (!formEl) return;
+  const draft = readDraft();
+  (Object.keys(emptyForm) as (keyof FormState)[]).forEach((key) => {
+    const value = draft[key];
+    if (!value) return;
+    const field = formEl.elements.namedItem(key);
+    if (
+      field &&
+      field instanceof HTMLElement &&
+      "value" in field &&
+      !String((field as HTMLInputElement).value || "").trim()
+    ) {
+      (field as HTMLInputElement).value = value;
+    }
+  });
+}
+
 export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [form, setForm] = useState<FormState>(emptyForm);
+  const [formKey, setFormKey] = useState(0);
+  const [planHint, setPlanHint] = useState<PlanType>("");
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>(
     {},
   );
@@ -267,19 +314,11 @@ export default function HomePage() {
   const [sentTo, setSentTo] = useState("");
 
   const planLabel =
-    form.plan === "monthly"
+    planHint === "monthly"
       ? "Monthly Watch"
-      : form.plan === "yearly"
+      : planHint === "yearly"
         ? "Yearly Watch"
         : "Not specified";
-
-  function patchForm(patch: Partial<FormState>) {
-    setForm((current) => {
-      const next = { ...current, ...patch };
-      writeDraft(next);
-      return next;
-    });
-  }
 
   function validate(next: FormState) {
     const nextErrors: Partial<Record<keyof FormState, string>> = {};
@@ -306,17 +345,7 @@ export default function HomePage() {
     const host =
       formEl ||
       (document.getElementById("request-service-form") as HTMLFormElement | null);
-    const data = host ? new FormData(host) : null;
-    const snapshot: FormState = {
-      name: String(data?.get("name") || form.name),
-      email: String(data?.get("email") || form.email),
-      phone: String(data?.get("phone") || form.phone),
-      propertyType: (String(
-        data?.get("propertyType") || form.propertyType,
-      ) || "") as FormState["propertyType"],
-      plan: (String(data?.get("plan") || form.plan) || "") as FormState["plan"],
-      message: String(data?.get("message") || form.message),
-    };
+    const snapshot = snapshotForm(host);
 
     const nextErrors = validate(snapshot);
     setErrors(nextErrors);
@@ -403,9 +432,10 @@ export default function HomePage() {
       }).catch(() => undefined);
 
       setSentTo(snapshot.email);
-      setForm(emptyForm);
       setHoneypot("");
-      sessionStorage.removeItem("jsm-request-draft");
+      setPlanHint("");
+      sessionStorage.removeItem(FORM_DRAFT_KEY);
+      setFormKey((current) => current + 1);
       setStatus("success");
     } catch {
       setStatus("error");
@@ -452,11 +482,7 @@ export default function HomePage() {
     if (status === "success") {
       setSentTo("");
     }
-    setForm((current) => {
-      const next = plan ? { ...current, plan } : current;
-      writeDraft(next);
-      return next;
-    });
+    if (plan) setPlanHint(plan);
     const dialog = getDialog();
     try {
       if (dialog && !dialog.open) dialog.showModal();
@@ -465,34 +491,19 @@ export default function HomePage() {
     }
   }
 
-  useLayoutEffect(() => {
-    const draft = readDraft();
-    if (
-      !draft.name &&
-      !draft.email &&
-      !draft.phone &&
-      !draft.message &&
-      !draft.propertyType &&
-      !draft.plan
-    ) {
-      return;
-    }
-
-    const frame = window.requestAnimationFrame(() => {
-      setForm((current) => {
-        const empty =
-          !current.name &&
-          !current.email &&
-          !current.phone &&
-          !current.message &&
-          !current.propertyType &&
-          !current.plan;
-        return empty ? draft : current;
-      });
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, []);
+  useEffect(() => {
+    const formEl = document.getElementById(
+      "request-service-form",
+    ) as HTMLFormElement | null;
+    fillEmptyFieldsFromDraft(formEl);
+    const persist = () => persistLiveDraft(formEl);
+    formEl?.addEventListener("input", persist);
+    formEl?.addEventListener("change", persist);
+    return () => {
+      formEl?.removeEventListener("input", persist);
+      formEl?.removeEventListener("change", persist);
+    };
+  }, [formKey]);
 
   useEffect(() => {
     window.jsmOnRequestSent = (detail) => {
@@ -500,9 +511,10 @@ export default function HomePage() {
       else setErrors({});
       if (detail.ok) {
         setSentTo(detail.email || "");
-        setForm(emptyForm);
         setHoneypot("");
-        sessionStorage.removeItem("jsm-request-draft");
+        setPlanHint("");
+        sessionStorage.removeItem(FORM_DRAFT_KEY);
+        setFormKey((current) => current + 1);
         setStatus("success");
         return;
       }
@@ -994,6 +1006,7 @@ export default function HomePage() {
                 </a>
             </div>
             <form
+              key={formKey}
               id="request-service-form"
               data-react="ready"
               onSubmit={onSubmit}
@@ -1001,12 +1014,14 @@ export default function HomePage() {
               className="overflow-y-auto px-5 py-5 sm:px-6"
               noValidate
             >
-              {form.plan ? (
+              {planHint ? (
                 <p className="mb-5 rounded-xl border border-gold/40 bg-gold/15 px-4 py-3 text-sm font-semibold text-forest">
                   You&apos;re requesting {planLabel}. Complete the form and
                   we&apos;ll follow up with scheduling.
                 </p>
-              ) : null}
+              ) : (
+                <p className="mb-5 hidden" aria-hidden="true" />
+              )}
 
               <div className="absolute -left-[9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
                 <label>
@@ -1028,8 +1043,7 @@ export default function HomePage() {
                     id="contact-name"
                     name="name"
                     autoComplete="name"
-                    value={form.name}
-                    onChange={(event) => patchForm({ name: event.target.value })}
+                    defaultValue=""
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                     placeholder="Your full name"
                   />
@@ -1044,8 +1058,7 @@ export default function HomePage() {
                     name="email"
                     type="email"
                     autoComplete="email"
-                    value={form.email}
-                    onChange={(event) => patchForm({ email: event.target.value })}
+                    defaultValue=""
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                     placeholder="you@email.com"
                   />
@@ -1062,8 +1075,7 @@ export default function HomePage() {
                     name="phone"
                     type="tel"
                     autoComplete="tel"
-                    value={form.phone}
-                    onChange={(event) => patchForm({ phone: event.target.value })}
+                    defaultValue=""
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                     placeholder="(231) 555-0148"
                   />
@@ -1078,12 +1090,7 @@ export default function HomePage() {
                   </span>
                   <select
                     name="propertyType"
-                    value={form.propertyType}
-                    onChange={(event) =>
-                      patchForm({
-                        propertyType: event.target.value as PropertyType,
-                      })
-                    }
+                    defaultValue=""
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                   >
                     <option value="">Select one</option>
@@ -1104,9 +1111,9 @@ export default function HomePage() {
                   </span>
                   <select
                     name="plan"
-                    value={form.plan}
+                    defaultValue=""
                     onChange={(event) =>
-                      patchForm({ plan: event.target.value as PlanType })
+                      setPlanHint(event.target.value as PlanType)
                     }
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                   >
@@ -1123,10 +1130,7 @@ export default function HomePage() {
                   <textarea
                     name="message"
                     rows={4}
-                    value={form.message}
-                    onChange={(event) =>
-                      patchForm({ message: event.target.value })
-                    }
+                    defaultValue=""
                     className="resize-y rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                     placeholder="Tell us about the property, travel schedule, and anything we should know."
                   />
