@@ -48,7 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-cream text-forest-deep">
         {children}
-        <script src="/open-request.js?v=send-feedback-2" defer />
+        <script src="/open-request.js?v=send-feedback-3" defer />
       </body>
     </html>
   );

@@ -167,6 +167,7 @@ type RequestSentDetail = {
 declare global {
   interface Window {
     jsmOnRequestSent?: (detail: RequestSentDetail) => void;
+    jsmOnRequestStart?: () => void;
     __jsmAllowDialogClose?: boolean;
   }
 }
@@ -534,6 +535,7 @@ export default function HomePage() {
       setStatus("submitting");
     }
     document.addEventListener("jsm-request-start", onStart);
+    window.jsmOnRequestStart = onStart;
     window.jsmOnRequestSent = (detail) => {
       if (detail.errors) setErrors(detail.errors);
       else setErrors({});
@@ -559,6 +561,7 @@ export default function HomePage() {
     };
     return () => {
       document.removeEventListener("jsm-request-start", onStart);
+      delete window.jsmOnRequestStart;
       delete window.jsmOnRequestSent;
     };
   }, []);

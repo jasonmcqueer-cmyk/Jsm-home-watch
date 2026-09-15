@@ -121,8 +121,12 @@
     var btn = document.querySelector("[data-send-request]");
     if (btn) {
       btn.disabled = Boolean(isSending);
-      if (isSending) btn.setAttribute("aria-busy", "true");
-      else btn.removeAttribute("aria-busy");
+      if (isSending) {
+        btn.setAttribute("aria-busy", "true");
+        btn.textContent = "Sending…";
+      } else {
+        btn.removeAttribute("aria-busy");
+      }
     }
     var statusNode = document.getElementById("request-send-status");
     if (!statusNode) return statusNode;
@@ -172,8 +176,11 @@
   }
 
   function notify(name, detail) {
-    document.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
-    if (typeof window.jsmOnRequestSent === "function" && name === "jsm-request-result") {
+    document.dispatchEvent(new CustomEvent(name, { detail: detail || {}, bubbles: true }));
+    if (name === "jsm-request-start" && typeof window.jsmOnRequestStart === "function") {
+      window.jsmOnRequestStart();
+    }
+    if (name === "jsm-request-result" && typeof window.jsmOnRequestSent === "function") {
       window.jsmOnRequestSent(detail || {});
     }
   }
