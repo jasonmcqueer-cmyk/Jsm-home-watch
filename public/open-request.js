@@ -170,6 +170,8 @@
     keepDialogOpen();
     notify("jsm-request-result", { ok: true, email: email });
   }
+
+  function notify(name, detail) {
     document.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
     if (typeof window.jsmOnRequestSent === "function" && name === "jsm-request-result") {
       window.jsmOnRequestSent(detail || {});
