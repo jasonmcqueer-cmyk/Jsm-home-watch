@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState, type ReactNode } from "react";
+import { FormEvent, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowRight,
   Award,
@@ -167,6 +167,7 @@ type RequestSentDetail = {
 declare global {
   interface Window {
     jsmOnRequestSent?: (detail: RequestSentDetail) => void;
+    __jsmAllowDialogClose?: boolean;
   }
 }
 
@@ -312,6 +313,7 @@ export default function HomePage() {
   const [sendError, setSendError] = useState("");
   const [honeypot, setHoneypot] = useState("");
   const [sentTo, setSentTo] = useState("");
+  const stayOpenRef = useRef(false);
 
   const planLabel =
     planHint === "monthly"
@@ -356,6 +358,7 @@ export default function HomePage() {
     }
 
     sending.__jsmSending = true;
+    stayOpenRef.current = true;
     setStatus("submitting");
     const payload = {
       name: snapshot.name.trim(),
@@ -432,6 +435,7 @@ export default function HomePage() {
       }).catch(() => undefined);
 
       setSentTo(snapshot.email);
+      stayOpenRef.current = true;
       setHoneypot("");
       setPlanHint("");
       sessionStorage.removeItem(FORM_DRAFT_KEY);
@@ -464,10 +468,12 @@ export default function HomePage() {
   }
 
   function closeModal() {
+    stayOpenRef.current = false;
+    window.__jsmAllowDialogClose = true;
     const dialog = getDialog();
     if (dialog?.open) dialog.close();
     setSendError("");
-    if (status === "success") {
+    if (status === "success" || status === "submitting") {
       setStatus("idle");
       setSentTo("");
       setFormKey((current) => current + 1);
@@ -506,11 +512,33 @@ export default function HomePage() {
     };
   }, [formKey]);
 
+  useLayoutEffect(() => {
+    if (status !== "submitting" && status !== "success") return;
+    const dialog = getDialog();
+    if (!dialog) return;
+    stayOpenRef.current = true;
+    if (!dialog.open) {
+      try {
+        dialog.showModal();
+      } catch {
+        dialog.setAttribute("open", "");
+      }
+    }
+  }, [status]);
+
   useEffect(() => {
+    function onStart() {
+      stayOpenRef.current = true;
+      setErrors({});
+      setSendError("");
+      setStatus("submitting");
+    }
+    document.addEventListener("jsm-request-start", onStart);
     window.jsmOnRequestSent = (detail) => {
       if (detail.errors) setErrors(detail.errors);
       else setErrors({});
       if (detail.ok) {
+        stayOpenRef.current = true;
         setSentTo(detail.email || "");
         setHoneypot("");
         setPlanHint("");
@@ -518,6 +546,7 @@ export default function HomePage() {
         setStatus("success");
         return;
       }
+      stayOpenRef.current = true;
       if (detail.errors) {
         setStatus("error");
         setSendError(
@@ -529,6 +558,7 @@ export default function HomePage() {
       setSendError(detail.error || "");
     };
     return () => {
+      document.removeEventListener("jsm-request-start", onStart);
       delete window.jsmOnRequestSent;
     };
   }, []);
@@ -933,9 +963,25 @@ export default function HomePage() {
         id="request-service"
         aria-labelledby="request-title"
         onClick={(event) => {
-          if (event.target === event.currentTarget) closeModal();
+          if (event.target !== event.currentTarget) return;
+          if (status === "submitting" || status === "success") return;
+          closeModal();
         }}
         onClose={() => {
+          if (stayOpenRef.current && !window.__jsmAllowDialogClose) {
+            const dialog = getDialog();
+            window.requestAnimationFrame(() => {
+              if (!stayOpenRef.current || !dialog || dialog.open) return;
+              try {
+                dialog.showModal();
+              } catch {
+                dialog.setAttribute("open", "");
+              }
+            });
+            return;
+          }
+          window.__jsmAllowDialogClose = false;
+          stayOpenRef.current = false;
           setSendError("");
           if (status === "success") {
             setStatus("idle");
@@ -979,7 +1025,11 @@ export default function HomePage() {
                 <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gold/15 text-gold">
                   <Check className="h-6 w-6" />
                 </span>
-                <h3 className="mt-4 font-display text-2xl font-bold text-forest">
+                <h3
+                  id="request-received-title"
+                  tabIndex={-1}
+                  className="mt-4 font-display text-2xl font-bold text-forest outline-none"
+                >
                   Request received
                 </h3>
                 <p className="mt-3 text-sm text-forest/75">
@@ -1152,15 +1202,20 @@ export default function HomePage() {
 
               <p
                 id="request-send-status"
-                hidden
+                hidden={status !== "submitting"}
+                aria-live="polite"
                 className="mt-5 rounded-xl border border-gold bg-gold/25 px-4 py-3 text-sm font-semibold text-forest"
-              />
+              >
+                {status === "submitting" ? "Sending…" : ""}
+              </p>
 
               <button
                 type="button"
                 data-send-request="true"
+                disabled={status === "submitting"}
+                aria-busy={status === "submitting"}
                 onClick={() => void sendRequest()}
-                className={`mt-6 w-full ${goldButtonClass} px-6 py-3.5 text-sm tracking-wide uppercase`}
+                className={`mt-6 w-full ${goldButtonClass} px-6 py-3.5 text-sm tracking-wide uppercase disabled:pointer-events-none disabled:opacity-80`}
               >
                 {status === "submitting" ? (
                   <>

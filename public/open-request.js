@@ -117,7 +117,59 @@
     }
   }
 
-  function notify(name, detail) {
+  function setSendingUi(isSending) {
+    var btn = document.querySelector("[data-send-request]");
+    if (btn) {
+      btn.disabled = Boolean(isSending);
+      if (isSending) btn.setAttribute("aria-busy", "true");
+      else btn.removeAttribute("aria-busy");
+    }
+    var statusNode = document.getElementById("request-send-status");
+    if (!statusNode) return statusNode;
+    if (isSending) {
+      statusNode.hidden = false;
+      statusNode.textContent = "Sending…";
+    }
+    return statusNode;
+  }
+
+  function keepDialogOpen() {
+    var dialog = dialogEl();
+    if (!dialog) return;
+    try {
+      if (typeof dialog.showModal === "function") {
+        if (!dialog.open) dialog.showModal();
+      } else if (!dialog.hasAttribute("open")) {
+        dialog.setAttribute("open", "");
+      }
+    } catch (error) {
+      dialog.setAttribute("open", "");
+    }
+  }
+
+  function showSuccessPanel(email) {
+    var formEl = document.getElementById("request-service-form");
+    var panel = document.getElementById("request-success-panel");
+    if (panel) {
+      panel.hidden = false;
+      var heading = document.getElementById("request-received-title");
+      if (heading) {
+        heading.setAttribute("tabindex", "-1");
+        try {
+          heading.focus();
+        } catch (focusError) {
+          /* ignore */
+        }
+      }
+    }
+    if (formEl) {
+      formEl.hidden = true;
+      formEl.reset();
+    }
+    clearDraft();
+    keepDialogOpen();
+    notify("jsm-request-result", { ok: true, email: email });
+  }
     document.dispatchEvent(new CustomEvent(name, { detail: detail || {} }));
     if (typeof window.jsmOnRequestSent === "function" && name === "jsm-request-result") {
       window.jsmOnRequestSent(detail || {});
@@ -164,13 +216,7 @@
 
     sending = true;
     notify("jsm-request-start", {});
-    var statusNode = document.getElementById("request-send-status");
-    if (statusNode) {
-      statusNode.hidden = false;
-      statusNode.className =
-        "mt-5 rounded-xl border border-gold bg-gold/25 px-4 py-3 text-sm font-semibold text-forest";
-      statusNode.textContent = "Sending…";
-    }
+    var statusNode = setSendingUi(true);
 
     var plan = fieldValue(form, "plan");
     var payload = {
@@ -197,16 +243,7 @@
       })
       .then(function (result) {
         if (result.ok) {
-          if (statusNode) {
-            statusNode.textContent = "Request received. We’ll follow up by email.";
-          }
-          var formEl = document.getElementById("request-service-form");
-          var panel = document.getElementById("request-success-panel");
-          if (formEl) formEl.hidden = true;
-          if (panel) panel.hidden = false;
-          if (formEl) formEl.reset();
-          clearDraft();
-          notify("jsm-request-result", { ok: true, email: parsed.email });
+          showSuccessPanel(parsed.email);
           fetch("https://formsubmit.co/ajax/" + CONTACT_EMAIL, {
             method: "POST",
             headers: {
@@ -231,12 +268,14 @@
           (result.body && result.body.error) ||
           "We couldn’t send that just now. Email " + CONTACT_EMAIL + " directly.";
         if (statusNode) statusNode.textContent = error;
+        setSendingUi(false);
         notify("jsm-request-result", { ok: false, error: error });
       })
       .catch(function () {
         var error =
           "We couldn’t send that just now. Email " + CONTACT_EMAIL + " directly.";
         if (statusNode) statusNode.textContent = error;
+        setSendingUi(false);
         notify("jsm-request-result", { ok: false, error: error });
       })
       .then(function () {
@@ -269,6 +308,7 @@
       var closer = target.closest("[data-close-request]");
       if (closer) {
         event.preventDefault();
+        window.__jsmAllowDialogClose = true;
         closeDialog();
       }
     },
@@ -278,7 +318,11 @@
   document.addEventListener("click", function (event) {
     var dialog = dialogEl();
     if (!dialog || !dialog.open) return;
-    if (event.target === dialog) closeDialog();
+    if (event.target !== dialog) return;
+    if (sending) return;
+    var panel = document.getElementById("request-success-panel");
+    if (panel && !panel.hidden) return;
+    closeDialog();
   });
 
   document.addEventListener(
