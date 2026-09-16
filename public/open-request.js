@@ -63,6 +63,7 @@
     if (formEl) {
       formEl.hidden = false;
       restoreDraft(formEl);
+      clearFormAlerts(formEl);
     }
     if (panel) panel.hidden = true;
 
@@ -185,6 +186,72 @@
     }
   }
 
+  function errorSummary(errors) {
+    if (errors.message && Object.keys(errors).length === 1) {
+      return "Please add a short message about the property, then tap Send again.";
+    }
+    return "Please complete the highlighted fields so we can follow up.";
+  }
+
+  function showFieldErrors(form, errors) {
+    if (!form) return;
+    var names = ["name", "email", "phone", "propertyType", "message"];
+    var first = null;
+    for (var i = 0; i < names.length; i++) {
+      var key = names[i];
+      var field = form.querySelector('[name="' + key + '"]');
+      var slot = form.querySelector('[data-field-error="' + key + '"]');
+      var message = errors[key] || "";
+      if (field) {
+        if (message) {
+          field.setAttribute("aria-invalid", "true");
+          if (!first) first = field;
+        } else {
+          field.removeAttribute("aria-invalid");
+        }
+      }
+      if (slot) {
+        slot.hidden = !message;
+        slot.textContent = message;
+      }
+    }
+    var alertBox = document.getElementById("request-form-alert");
+    if (alertBox) {
+      alertBox.hidden = false;
+      alertBox.textContent = errorSummary(errors);
+    }
+    if (first && typeof first.scrollIntoView === "function") {
+      first.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+    if (first && typeof first.focus === "function") {
+      try {
+        first.focus({ preventScroll: true });
+      } catch (focusError) {
+        try {
+          first.focus();
+        } catch (ignored) {}
+      }
+    }
+  }
+
+  function clearFormAlerts(form) {
+    if (!form) return;
+    var fields = form.querySelectorAll("[aria-invalid]");
+    for (var i = 0; i < fields.length; i++) {
+      fields[i].removeAttribute("aria-invalid");
+    }
+    var slots = form.querySelectorAll("[data-field-error]");
+    for (var s = 0; s < slots.length; s++) {
+      slots[s].hidden = true;
+      slots[s].textContent = "";
+    }
+    var alertBox = document.getElementById("request-form-alert");
+    if (alertBox) {
+      alertBox.hidden = true;
+      alertBox.textContent = "";
+    }
+  }
+
   function fieldValue(form, name) {
     var el = form.querySelector('[name="' + name + '"]');
     return el && typeof el.value === "string" ? el.value.trim() : "";
@@ -215,15 +282,17 @@
     if (sending) return;
     var parsed = validate(form);
     if (Object.keys(parsed.errors).length) {
+      showFieldErrors(form, parsed.errors);
       notify("jsm-request-result", {
         ok: false,
         errors: parsed.errors,
-        error: "Please complete the highlighted fields so we can follow up.",
+        error: errorSummary(parsed.errors),
       });
-      return;
+      return false;
     }
 
     sending = true;
+    clearFormAlerts(form);
     notify("jsm-request-start", {});
     var statusNode = setSendingUi(true);
 
@@ -308,9 +377,20 @@
       var sender = target.closest("[data-send-request]");
       if (sender) {
         event.preventDefault();
-        event.stopPropagation();
         var form = document.getElementById("request-service-form");
-        if (form) sendForm(form);
+        if (!form) return;
+        var parsed = validate(form);
+        if (Object.keys(parsed.errors).length) {
+          showFieldErrors(form, parsed.errors);
+          notify("jsm-request-result", {
+            ok: false,
+            errors: parsed.errors,
+            error: errorSummary(parsed.errors),
+          });
+          return;
+        }
+        event.stopPropagation();
+        sendForm(form);
         return;
       }
 
@@ -340,7 +420,16 @@
       var target = event.target;
       if (!target || typeof target.closest !== "function") return;
       var form = target.closest("#request-service-form");
-      if (form) persistDraft(form);
+      if (!form) return;
+      persistDraft(form);
+      if (target.getAttribute && target.getAttribute("name")) {
+        target.removeAttribute("aria-invalid");
+        var slot = form.querySelector('[data-field-error="' + target.getAttribute("name") + '"]');
+        if (slot) {
+          slot.hidden = true;
+          slot.textContent = "";
+        }
+      }
     },
     true,
   );

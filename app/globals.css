@@ -41,10 +41,9 @@ button {
   color: var(--forest-deep);
 }
 
-input,
-select,
-textarea {
-  font: inherit;
+#request-service-form :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: #b91c1c;
+  box-shadow: 0 0 0 2px rgb(185 28 28 / 0.28);
 }
 
 #request-service {

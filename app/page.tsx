@@ -352,11 +352,35 @@ export default function HomePage() {
 
     const nextErrors = validate(snapshot);
     setErrors(nextErrors);
-    setSendError("");
     if (Object.keys(nextErrors).length > 0) {
+      const onlyMessage =
+        Boolean(nextErrors.message) && Object.keys(nextErrors).length === 1;
       setStatus("error");
+      setSendError(
+        onlyMessage
+          ? "Please add a short message about the property, then tap Send again."
+          : "Please complete the highlighted fields so we can follow up.",
+      );
+      const order: (keyof FormState)[] = [
+        "name",
+        "email",
+        "phone",
+        "propertyType",
+        "message",
+      ];
+      const first = order.find((key) => nextErrors[key]);
+      window.queueMicrotask(() => {
+        const field = host?.querySelector(
+          first ? `[name="${first}"]` : "[name=message]",
+        );
+        if (field instanceof HTMLElement) {
+          field.scrollIntoView({ block: "center", behavior: "smooth" });
+          field.focus({ preventScroll: true });
+        }
+      });
       return;
     }
+    setSendError("");
 
     sending.__jsmSending = true;
     stayOpenRef.current = true;
@@ -1064,6 +1088,13 @@ export default function HomePage() {
               id="request-service-form"
               data-react="ready"
               onSubmit={onSubmit}
+              onInput={() => {
+                if (status === "error" || sendError) {
+                  setErrors({});
+                  setSendError("");
+                  setStatus("idle");
+                }
+              }}
               hidden={status === "success"}
               className="overflow-y-auto px-5 py-5 sm:px-6"
               noValidate
@@ -1102,10 +1133,17 @@ export default function HomePage() {
                     autoComplete="name"
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                     placeholder="Your full name"
+                    aria-invalid={Boolean(errors.name)}
+                    aria-describedby={errors.name ? "error-name" : undefined}
                   />
-                  {errors.name ? (
-                    <span className="text-sm text-red-700">{errors.name}</span>
-                  ) : null}
+                  <span
+                    id="error-name"
+                    data-field-error="name"
+                    hidden={!errors.name}
+                    className="text-sm font-semibold text-red-700"
+                  >
+                    {errors.name || ""}
+                  </span>
                 </label>
 
                 <label className="flex flex-col gap-2">
@@ -1116,10 +1154,17 @@ export default function HomePage() {
                     autoComplete="email"
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                     placeholder="you@email.com"
+                    aria-invalid={Boolean(errors.email)}
+                    aria-describedby={errors.email ? "error-email" : undefined}
                   />
-                  {errors.email ? (
-                    <span className="text-sm text-red-700">{errors.email}</span>
-                  ) : null}
+                  <span
+                    id="error-email"
+                    data-field-error="email"
+                    hidden={!errors.email}
+                    className="text-sm font-semibold text-red-700"
+                  >
+                    {errors.email || ""}
+                  </span>
                 </label>
 
                 <label className="flex flex-col gap-2">
@@ -1132,10 +1177,17 @@ export default function HomePage() {
                     autoComplete="tel"
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                     placeholder="(231) 555-0148"
+                    aria-invalid={Boolean(errors.phone)}
+                    aria-describedby={errors.phone ? "error-phone" : undefined}
                   />
-                  {errors.phone ? (
-                    <span className="text-sm text-red-700">{errors.phone}</span>
-                  ) : null}
+                  <span
+                    id="error-phone"
+                    data-field-error="phone"
+                    hidden={!errors.phone}
+                    className="text-sm font-semibold text-red-700"
+                  >
+                    {errors.phone || ""}
+                  </span>
                 </label>
 
                 <label className="flex flex-col gap-2 sm:col-span-2">
@@ -1145,17 +1197,24 @@ export default function HomePage() {
                   <select
                     name="propertyType"
                     className="rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
+                    aria-invalid={Boolean(errors.propertyType)}
+                    aria-describedby={
+                      errors.propertyType ? "error-propertyType" : undefined
+                    }
                   >
                     <option value="">Select one</option>
                     <option value="primary">Primary Home</option>
                     <option value="vacation">Vacation Home</option>
                     <option value="airbnb">Airbnb</option>
                   </select>
-                  {errors.propertyType ? (
-                    <span className="text-sm text-red-700">
-                      {errors.propertyType}
-                    </span>
-                  ) : null}
+                  <span
+                    id="error-propertyType"
+                    data-field-error="propertyType"
+                    hidden={!errors.propertyType}
+                    className="text-sm font-semibold text-red-700"
+                  >
+                    {errors.propertyType || ""}
+                  </span>
                 </label>
 
                 <label className="flex flex-col gap-2 sm:col-span-2">
@@ -1177,31 +1236,40 @@ export default function HomePage() {
 
                 <label className="flex flex-col gap-2 sm:col-span-2">
                   <span className="text-sm font-semibold text-forest">
-                    Message
+                    Message <span className="text-red-700">*</span>
                   </span>
                   <textarea
+                    id="contact-message"
                     name="message"
                     rows={4}
+                    required
+                    aria-required="true"
+                    aria-invalid={Boolean(errors.message)}
+                    aria-describedby={
+                      errors.message ? "error-message" : undefined
+                    }
                     className="resize-y rounded-xl border border-forest/15 bg-cream px-4 py-3 outline-none ring-gold/40 transition focus:ring-2"
                     placeholder="Tell us about the property, travel schedule, and anything we should know."
                   />
-                  {errors.message ? (
-                    <span className="text-sm text-red-700">{errors.message}</span>
-                  ) : null}
+                  <span
+                    id="error-message"
+                    data-field-error="message"
+                    hidden={!errors.message}
+                    className="text-sm font-semibold text-red-700"
+                  >
+                    {errors.message || ""}
+                  </span>
                 </label>
               </div>
 
-              {status === "error" && sendError ? (
-                <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">
-                  {sendError}
-                </p>
-              ) : null}
-
-              {status === "error" && !sendError ? (
-                <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">
-                  Please complete the highlighted fields so we can follow up.
-                </p>
-              ) : null}
+              <p
+                id="request-form-alert"
+                role="alert"
+                hidden={!sendError}
+                className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-800"
+              >
+                {sendError}
+              </p>
 
               <p
                 id="request-send-status"
