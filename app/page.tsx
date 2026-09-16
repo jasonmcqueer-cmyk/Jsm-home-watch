@@ -355,6 +355,7 @@ export default function HomePage() {
     if (Object.keys(nextErrors).length > 0) {
       const onlyMessage =
         Boolean(nextErrors.message) && Object.keys(nextErrors).length === 1;
+      stayOpenRef.current = true;
       setStatus("error");
       setSendError(
         onlyMessage
@@ -991,8 +992,6 @@ export default function HomePage() {
         aria-labelledby="request-title"
         onClick={(event) => {
           if (event.target !== event.currentTarget) return;
-          if (status === "submitting" || status === "success") return;
-          closeModal();
         }}
         onClose={() => {
           if (stayOpenRef.current && !window.__jsmAllowDialogClose) {

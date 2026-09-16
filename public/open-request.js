@@ -408,10 +408,7 @@
     var dialog = dialogEl();
     if (!dialog || !dialog.open) return;
     if (event.target !== dialog) return;
-    if (sending) return;
-    var panel = document.getElementById("request-success-panel");
-    if (panel && !panel.hidden) return;
-    closeDialog();
+    /* Keep the popup open. Only Done / Close should dismiss it. */
   });
 
   document.addEventListener(
