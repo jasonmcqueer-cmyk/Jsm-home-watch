@@ -2,7 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { NextResponse } from "next/server";
 
-const CONTACT_EMAIL = "jsmhomewatch@yahoo.com";
+const CONTACT_EMAIL = "jsmhomewatch@gmail.com";
 const STORE = join(process.cwd(), "data", "submissions.json");
 
 type ContactBody = {

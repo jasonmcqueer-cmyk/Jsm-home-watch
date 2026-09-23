@@ -10,7 +10,7 @@ Tagline: *Peace of mind while you're away.*
 - Trust bar (insured, background-checked, references, community reputation)
 - Four service categories: home watch, grounds & exterior, Airbnb co-hosting, and concierge
 - Monthly and yearly plan comparison
-- Lead-capture popup that emails service requests to `jsmhomewatch@yahoo.com`
+- Lead-capture popup that emails service requests to `jsmhomewatch@gmail.com`
 
 The marketing page lives in `app/page.tsx`. Field checks live in `app/api/contact/route.ts`.
 
@@ -38,4 +38,4 @@ npm start
 
 Deploy on Vercel with the default Next.js settings. No environment variables are required.
 
-The contact form saves each request on the server and also tries to email `jsmhomewatch@yahoo.com`. If the inbox has not been activated yet, the request is still stored and shown as received.
+The contact form saves each request on the server and also tries to email `jsmhomewatch@gmail.com`. If the inbox has not been activated yet, the request is still stored and shown as received.

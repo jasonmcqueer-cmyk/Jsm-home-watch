@@ -21,7 +21,7 @@ import {
   X,
 } from "lucide-react";
 
-const CONTACT_EMAIL = "jsmhomewatch@yahoo.com";
+const CONTACT_EMAIL = "jsmhomewatch@gmail.com";
 
 const trustBadges = [
   {

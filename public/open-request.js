@@ -1,5 +1,5 @@
 (function () {
-  var CONTACT_EMAIL = "jsmhomewatch@yahoo.com";
+  var CONTACT_EMAIL = "jsmhomewatch@gmail.com";
   var DRAFT_KEY = "jsm-request-draft";
   var FIELD_NAMES = ["name", "email", "phone", "propertyType", "plan", "message"];
   var sending = false;
