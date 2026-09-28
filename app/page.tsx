@@ -19,9 +19,21 @@ import {
   UserCheck,
   Users,
   X,
+  type LucideIcon,
 } from "lucide-react";
 
 const CONTACT_EMAIL = "jsmhomewatch@gmail.com";
+
+type ServiceItem = {
+  name?: string;
+  text: string;
+};
+
+type ServiceCategory = {
+  icon: LucideIcon;
+  title: string;
+  items: ServiceItem[];
+};
 
 const trustBadges = [
   {
@@ -46,7 +58,7 @@ const trustBadges = [
   },
 ];
 
-const serviceCategories = [
+const serviceCategories: ServiceCategory[] = [
   {
     icon: ClipboardCheck,
     title: "Home Watch & Property Inspection",
